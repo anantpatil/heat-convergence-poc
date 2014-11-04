@@ -1066,3 +1066,10 @@ def resource_delete(context, resource_id):
     session = Session.object_session(resource)
     session.delete(resource)
     session.flush()
+
+
+def get_untraversed_edges(context, stack_id):
+    result = model_query(context, models.ResourceGraph.resource_name,
+                         models.ResourceGraph.needed_by).filter_by(
+                             traversed=False, stack_id=stack_id).all()
+    return result

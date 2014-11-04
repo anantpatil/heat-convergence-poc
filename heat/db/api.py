@@ -373,3 +373,7 @@ def resource_graph_delete_all_edges(context, stack_id, res_name):
 
 def resource_delete(context, resource_id):
     return IMPL.resource_delete(context, resource_id)
+
+
+def get_untraversed_edges(context, stack_id):
+    return IMPL.get_untraversed_edges(context, stack_id)

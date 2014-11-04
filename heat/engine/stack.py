@@ -21,6 +21,7 @@ from oslo.config import cfg
 from oslo.utils import encodeutils
 from osprofiler import profiler
 import six
+import json
 
 from heat.common import context as common_context
 from heat.common import exception
@@ -39,11 +40,13 @@ from heat.engine.notification import stack as notification
 from heat.engine.parameter_groups import ParameterGroups
 from heat.engine import resource
 from heat.engine import resources
+from heat.engine import rsrc_defn
 from heat.engine import scheduler
 from heat.engine.template import Template
 from heat.engine import update
 from heat.openstack.common import log as logging
 from heat.rpc import api as rpc_api
+from heat.rpc import client as rpc_client
 
 LOG = logging.getLogger(__name__)
 
@@ -113,6 +116,7 @@ class Stack(collections.Mapping):
         self.created_time = created_time
         self.updated_time = updated_time
         self.user_creds_id = user_creds_id
+        self.rpc_client = rpc_client.EngineClient()
 
         if use_stored_context:
             self.context = self.stored_context()
@@ -266,6 +270,61 @@ class Stack(collections.Mapping):
                                  'stack_id': self.id }
                         db_api.graph_insert_egde(self.context, value)
 
+    def _is_stack_complete(self):
+        edges = db_api.get_untraversed_edges(context=self.context,
+                                             stack_id=self.id)
+        return not edges
+
+    def _get_resource_action(self, res):
+        if self.action == self.CREATE:
+            return self.CREATE
+
+        new_res = self.resources[res]
+        old_res = db_api.resource_get_by_name_and_stack(context=self.context,
+                                                        resource_name=res,
+                                                        stack_id=self.id)
+        if old_res:
+            old_rsrc_defn = rsrc_defn.ResourceDefinition.from_dict(
+                                json.loads(old_res.rsrc_defn))
+            if new_res.needs_update(old_rsrc_defn):
+                return self.UPDATE
+            else:
+                return None
+        else:
+            return self.CREATE
+
+    def _get_ready_resources(self):
+        resources = db_api.get_ready_resources(context=self.context,
+                                               stack_id=self.id,
+                                               reverse=False)
+        changed_resources = []
+        unchanged_resources = []
+        for res in resources:
+            resource_action = self._get_resource_action(res)
+            if resource_action:
+                changed_resources.append({'resource':res,
+                                          'action': resource_action})
+            else:
+                unchanged_resources.append(res)
+        if unchanged_resources:
+            for res in unchanged_resources:
+                db_api.update_resource_traversal(context=self.context,
+                                                 stack_id=self.id,
+                                                 traversed=True,
+                                                 resource=res)
+            return self._get_ready_resources()
+        return changed_resources
+
+    def trigger_convergence(self):
+        resources = self._get_ready_resources()
+        if not resources and self._is_stack_complete():
+            reason = 'Stack %s completed successfully' % self.action
+            self.state_set(self.action, self.COMPLETE, reason)
+            return
+
+        for res in resources:
+            self.rpc_client.converge_resource(self.context, self.id,
+                                              res['resource'], res['action'])
 
     def reset_dependencies(self):
         self._dependencies = None

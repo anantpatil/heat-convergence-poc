@@ -621,6 +621,23 @@ class EngineService(service.Service):
         return api.format_stack_preview(stack)
 
     @request_context
+    def converge_resource(self, cnxt, stack_id, resource_name, action):
+        #TODO(ishant) : Remove this method as this is only test code.
+        stack = parser.Stack.load(cnxt, stack_id)
+        db_api.update_resource_traversal(context=cnxt,
+                                         stack_id=stack_id,
+                                         traversed=True,
+                                         resource=resource_name)
+        res = db_api.resource_get_by_name_and_stack(cnxt, resource_name,
+                                                    stack_id)
+        if not res:
+            from heat.engine import resource
+            defn = stack.t.resource_definitions(self).get(resource_name)
+            res = resource.Resource(resource_name, defn, stack)
+            res.store()
+        stack.trigger_convergence()
+
+    @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
                      owner_id=None):
         """
@@ -652,7 +669,7 @@ class EngineService(service.Service):
 
                 stack.adopt()
             else:
-                stack.create()
+                stack.trigger_convergence()
 
             if (stack.action in (stack.CREATE, stack.ADOPT)
                     and stack.status == stack.COMPLETE):
