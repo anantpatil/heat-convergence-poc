@@ -11,7 +11,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
 from heat.common.i18n import _LI
 from heat.db import api as db_api
 from heat.engine import resource
@@ -47,6 +46,9 @@ class StackUpdate(object):
     @scheduler.wrappertask
     def __call__(self):
         """Return a co-routine that updates the stack."""
+
+        # TODO: Rakesh: If rollback not enabled, delete the deleted resources first
+        # and then update the resources to take care of user quota
 
         self.updater = scheduler.DependencyTaskGroup(
             self.context,
@@ -142,13 +144,17 @@ class StackUpdate(object):
         for res in db_resources:
             LOG.debug("==== res_name: %s version %s", res.name, res.version)
         for db_resource in db_resources:
-            res = resource.Resource.load(db_resource,
-                                         self.stack)
-            yield res.destroy()
+            if db_resource.nova_instance:
+                res = resource.Resource.load(db_resource, self.stack)
+                yield res.destroy()
+            else:
+                # remove the DB entry
+                LOG.debug("==== Removing resource from DB: %s "
+                          "version: %s", db_resource.name, db_resource.version)
+                db_api.resource_delete(self.context, db_resource.id)
+
+        LOG.debug("==== Deleting all the edges for %s", res.name)
         self._delete_all_edges(res.name)
-        db_api.update_resource_traversal(self.context, self.stack_id,
-                                         traversed=True,
-                                         res_name=res.name)
 
     def _delete_all_edges(self, res_name):
         '''

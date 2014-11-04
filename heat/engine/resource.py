@@ -178,29 +178,21 @@ class Resource(object):
         self._stored_properties_data = None
         self.created_time = None
         self.updated_time = None
-        self.version = version
+        self.version = 0
         self._frozen_defn = None
-
-        resource = db_api.resource_get_by_name_and_stack(
-            self.stack.context, self.name, self.stack.id,
-            version=self.version)
-        if resource:
-            self._load_data(resource)
 
     @classmethod
     def load(cls, db_resource, stack):
-        return cls._from_db(db_resource, stack)
-
-    @classmethod
-    def _from_db(cls, db_resource, stack):
         r_defn = rsrc_defn.ResourceDefinition.from_json(
             db_resource.rsrc_defn, db_resource.rsrc_defn_hash)
-        return cls(db_resource.name, r_defn, stack,
-                   version=db_resource.version)
+        res = cls(db_resource.name, r_defn, stack)
+        res.load_data(db_resource)
+        return res
 
-    def _load_data(self, resource):
+    def load_data(self, resource):
         '''Load the resource state from its DB representation.'''
         self.resource_id = resource.nova_instance
+        self.version = resource.version
         self.action = resource.action
         self.status = resource.status
         self.status_reason = resource.status_reason
@@ -891,7 +883,7 @@ class Resource(object):
             return
 
         try:
-            db_api.resource_get(self.context, self.id).delete()
+            db_api.resource_delete(self.context, self.id)
         except exception.NotFound:
             # Don't fail on delete if the db entry has
             # not been created yet.

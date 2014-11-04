@@ -161,13 +161,6 @@ def resource_get_all_versions_by_name_and_stack(context, resource_name, stack_id
     return result
 
 
-def resource_delete(context, resource_id):
-    r = resource_get(context, resource_id)
-    session = _session(context)
-    session.delete(r)
-    session.flush()
-
-
 def resource_get_by_physical_resource_id(context, physical_resource_id):
     results = (model_query(context, models.Resource)
                .filter_by(nova_instance=physical_resource_id)
@@ -1055,9 +1048,10 @@ def resource_graph_delete_all_edges(context, stack_id, res_name):
     session = _session(context)
     with session.begin():
         session.query(models.ResourceGraph).\
-                      filter_by(stack_id=stack_id).\
-                      filter(or_(models.ResourceGraph.resource_name == res_name,
-                        models.ResourceGraph.needed_by == res_name)).delete()
+            filter_by(stack_id=stack_id).\
+            filter(or_(models.ResourceGraph.resource_name == res_name,
+                       models.ResourceGraph.needed_by == res_name)).\
+            delete()
     session.flush()
 
 

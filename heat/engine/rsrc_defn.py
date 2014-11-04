@@ -346,14 +346,21 @@ class ResourceDefinition(ResourceDefinitionCore, collections.Mapping):
                         depends=dict(data.get(DEPENDS_ON)),
                         description=dict(data.get(DESCRIPTION)))
         '''
+        properties = data.get(PROPERTIES)
+        metadata = data.get(METADATA)
+        deletion_policy = data.get(DELETION_POLICY)
+        update_policy = data.get(UPDATE_POLICY)
+        depends = data.get(DEPENDS_ON)
+        if isinstance(depends, basestring):
+            depends = [depends]
+        description = data.get(DESCRIPTION, '')
         rsrc_defn = cls(data.get(NAME), data.get(TYPE),
-                        properties=data.get(PROPERTIES),
-                        metadata=data.get(METADATA),
-                        deletion_policy=data.get(DELETION_POLICY),
-                        update_policy=data.get(UPDATE_POLICY),
-                        depends=data.get(DEPENDS_ON),
-                        description=data.get(DESCRIPTION, ''))
-
+                        properties=properties,
+                        metadata=metadata,
+                        deletion_policy=deletion_policy,
+                        update_policy=update_policy,
+                        depends=depends,
+                        description=description)
         rsrc_defn._frozen = True
         rsrc_defn._sha1_hash = sha1_sum
         return rsrc_defn

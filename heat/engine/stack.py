@@ -419,7 +419,7 @@ class Stack(collections.Mapping):
         If self.id is set, we update the existing stack
         '''
         s = {
-            'name': self._backup_name() if backup else self.name,
+            'name': self.name,
             'raw_template_id': self.t.store(self.context),
             'owner_id': self.owner_id,
             'username': self.username,
@@ -760,16 +760,27 @@ class Stack(collections.Mapping):
                                     '_%s_kwargs' % action_l, lambda x: {})
             yield handle(**handle_kwargs(r))
 
+    @scheduler.wrappertask
+    def resource_delete(self, rsrc_name):
+        db_resources = db_api.resource_get_all_versions_by_name_and_stack(
+            self.context, rsrc_name, self.id)
+        for db_resource in db_resources:
+            if db_resource.nova_instance:
+                LOG.debug("==== Destroy resource %s ", rsrc_name)
+                res = resource.Resource.load(db_resource, self)
+                yield res.destroy()
+            else:
+                db_api.resource_delete(self.context, db_resource.id)
+
     def converge(self, rsrc_name):
         # Just look for stack action and take steps
-        res = self.resources[rsrc_name]
         if self.action in (self.CREATE, self.ADOPT):
+            res = self.resources[rsrc_name]
             LOG.debug("==== Converging resource %s ", rsrc_name)
             # Find e.g resource.create and call it
             return self.resource_action(res)
-        else:
-            pass
-
+        elif self.action == self.DELETE:
+            return self.resource_delete(rsrc_name)
 
     @profiler.trace('Stack.check', hide_args=False)
     def check(self):
@@ -795,28 +806,6 @@ class Stack(collections.Mapping):
             self.state_set(self.CHECK, self.status, reason)
 
         return all(supported)
-
-    @profiler.trace('Stack._backup_stack', hide_args=False)
-    def _backup_stack(self, create_if_missing=True):
-        '''
-        Get a Stack containing any in-progress resources from the previous
-        stack state prior to an update.
-        '''
-        s = db_api.stack_get_by_name_and_owner_id(self.context,
-                                                  self._backup_name(),
-                                                  owner_id=self.id)
-        if s is not None:
-            LOG.debug('Loaded existing backup stack')
-            return self.load(self.context, stack=s)
-        elif create_if_missing:
-            prev = type(self)(self.context, self.name, copy.deepcopy(self.t),
-                              self.env, owner_id=self.id,
-                              user_creds_id=self.user_creds_id)
-            prev.store(backup=True)
-            LOG.debug('Created new backup stack')
-            return prev
-        else:
-            return None
 
     @profiler.trace('Stack.adopt', hide_args=False)
     def adopt(self):
@@ -997,66 +986,13 @@ class Stack(collections.Mapping):
                                          stack_id=self.id,
                                          traversed=False)
 
-        backup_stack = self._backup_stack(False)
-        if backup_stack:
-            def failed(child):
-                return (child.action == child.CREATE and
-                        child.status in (child.FAILED, child.IN_PROGRESS))
-
-            for key, backup_resource in backup_stack.resources.items():
-                # If UpdateReplace is failed, we must restore backup_resource
-                # to existing_stack in case of it may have dependencies in
-                # these stacks. current_resource is the resource that just
-                # created and failed, so put into the backup_stack to delete
-                # anyway.
-                backup_resource_id = backup_resource.resource_id
-                current_resource = self.resources[key]
-                current_resource_id = current_resource.resource_id
-                if backup_resource_id:
-                    if (any(failed(child) for child in
-                            self.dependencies[current_resource]) or
-                            current_resource.status in
-                            (current_resource.FAILED,
-                             current_resource.IN_PROGRESS)):
-                        # If child resource failed to update, current_resource
-                        # should be replaced to resolve dependencies. But this
-                        # is not fundamental solution. If there are update
-                        # failer and success resources in the children, cannot
-                        # delete the stack.
-                        # Stack class owns dependencies as set of resource's
-                        # objects, so we switch members of the resource that is
-                        # needed to delete it.
-                        self.resources[key].resource_id = backup_resource_id
-                        self.resources[
-                            key].properties = backup_resource.properties
-                        backup_stack.resources[
-                            key].resource_id = current_resource_id
-                        backup_stack.resources[
-                            key].properties = current_resource.properties
-
-            backup_stack.delete(backup=True)
-            if backup_stack.status != backup_stack.COMPLETE:
-                errs = backup_stack.status_reason
-                failure = 'Error deleting backup resources: %s' % errs
-                self.state_set(action, self.FAILED,
-                               'Failed to %s : %s' % (action, failure))
-                return
-
         snapshots = db_api.snapshot_get_all(self.context, self.id)
         for snapshot in snapshots:
             self.delete_snapshot(snapshot)
 
-        if not backup:
-            try:
-                lifecycle_plugin_utils.do_pre_ops(self.context, self,
-                                                  None, action)
-            except Exception as e:
-                self.state_set(action, self.FAILED,
-                               e.args[0] if e.args else
-                               'Failed stack pre-ops: %s' % six.text_type(e))
-                return
-        action_task = scheduler.DependencyTaskGroup(self.resources,
-                                                    resource.Resource.destroy,
+        action_task = scheduler.DependencyTaskGroup(self.context,
+                                                    self.id,
+                                                    self.converge,
                                                     reverse=True)
         try:
             scheduler.TaskRunner(action_task)(timeout=self.timeout_secs())
@@ -1069,7 +1005,7 @@ class Stack(collections.Mapping):
 
         # If the stack delete succeeded, this is not a backup stack and it's
         # not a nested stack, we should delete the credentials
-        if stack_status != self.FAILED and not backup and not self.owner_id:
+        if stack_status != self.FAILED and not self.owner_id:
             # Cleanup stored user_creds so they aren't accessible via
             # the soft-deleted stack which remains in the DB
             if self.user_creds_id:
@@ -1133,17 +1069,18 @@ class Stack(collections.Mapping):
             LOG.info(_LI("Tried to delete stack that does not exist "
                          "%s "), self.id)
 
-        if not backup:
-            lifecycle_plugin_utils.do_post_ops(self.context, self,
-                                               None, action,
-                                               (self.status == self.FAILED))
+        lifecycle_plugin_utils.do_post_ops(self.context, self,
+                                           None, action,
+                                           (self.status == self.FAILED))
         if stack_status != self.FAILED:
             # delete the stack resource graph
+            LOG.debug("==== Deleting resource graph for %s", self.name)
             try:
                 db_api.graph_delete(self.context, self.id)
             except Exception as e:
                 LOG.info(_("Failed to delete stack %s resource graph."),
                          self.id)
+            LOG.debug("==== Deleting stack for %s", self.name)
             # delete the stack
             try:
                 db_api.stack_delete(self.context, self.id)
