@@ -72,7 +72,7 @@ class Stack(collections.Mapping):
 
     _zones = None
 
-    def __init__(self, context, stack_name, tmpl, env=None,
+    def __init__(self, context, stack_name, tmpl,
                  stack_id=None, action=None, status=None,
                  status_reason='', timeout_mins=None, resolve_data=True,
                  disable_rollback=True, parent_resource=None, owner_id=None,
@@ -126,9 +126,17 @@ class Stack(collections.Mapping):
 
         resources.initialise()
 
-        self.env = env or environment.Environment({})
+        self.env = self.t.env
         self.parameters = self.t.parameters(self.identifier(),
                                             user_params=self.env.params)
+        # store the parameters with template
+        # self.t.env = self.parameters
+        # LOG.debug("==== Stack parameters %s", str(self.parameters))
+        # for k, v in self.parameters.items():
+            #LOG.debug("==== %s : %s", str(k), str(v))
+
+        # LOG.debug("==== Stack env %s", self.env.user_env_as_dict())
+
         self._set_param_stackid()
 
         if resolve_data:
@@ -198,6 +206,66 @@ class Stack(collections.Mapping):
             self._dependencies = self._get_dependencies(
                 self.resources.itervalues())
         return self._dependencies
+
+    def get_dependencies_from_template(self):
+        return self._get_dependencies(self.resources.itervalues())
+
+    def get_dependencies_from_db(self):
+        deps = db_api.graph_get_all_by_stack(self.context, self.id)
+        return deps
+
+    def _store_edges(self, resource_name, required_by):
+        value = {'resource_name': resource_name, 'stack_id': self.id}
+        if required_by:
+            for req in required_by:
+                value['needed_by'] = req
+                db_api.graph_insert_egde(self.context, value)
+        else:
+            db_api.graph_insert_egde(self.context, value)
+
+    def store_dependencies(self):
+        deps = self.get_dependencies_from_template()
+        with db_api.transaction(self.context):
+            for res in deps:
+                required_by = [req.name for req in deps.required_by(res)]
+                self._store_edges(res.name, required_by)
+
+    def update_dependencies(self):
+        new_deps = self.get_dependencies_from_template()
+        with db_api.transaction(self.context):
+            for res in new_deps:
+                value = {'resource_name': res.name, 'stack_id': self.id}
+                new_required_by = [req.name for req in
+                                   new_deps.required_by(res)]
+                old_required_by = db_api.get_resource_required_by(self.context,
+                                                                  self.id,
+                                                                  res.name)
+                resource_exists = db_api.resource_exists_in_graph(self.context,
+                                                                  self.id,
+                                                                  res.name)
+
+                # if it is a new resource then insert all the edges for
+                # this resource
+                if not resource_exists:
+                    self._store_edges(res.name, new_required_by)
+
+                # if resource exists in new template but dependencies
+                # are changed
+                elif set(new_required_by) != set(old_required_by):
+                    deleted_edges = set(old_required_by) - set(new_required_by)
+                    for edge in deleted_edges:
+                        value = {'resource_name': res.name,
+                                 'needed_by': edge,
+                                 'stack_id': self.id }
+                        db_api.graph_delete_egde(self.context, value)
+
+                    added_edges = set(new_required_by) - set(old_required_by)
+                    for edge in added_edges:
+                        value = {'resource_name': res.name,
+                                 'needed_by': edge,
+                                 'stack_id': self.id }
+                        db_api.graph_insert_egde(self.context, value)
+
 
     def reset_dependencies(self):
         self._dependencies = None
@@ -274,8 +342,7 @@ class Stack(collections.Mapping):
                  use_stored_context=False):
         template = Template.load(
             context, stack.raw_template_id, stack.raw_template)
-        env = environment.Environment(stack.parameters)
-        return cls(context, stack.name, template, env,
+        return cls(context, stack.name, template,
                    stack.id, stack.action, stack.status, stack.status_reason,
                    stack.timeout, resolve_data, stack.disable_rollback,
                    parent_resource, owner_id=stack.owner_id,
@@ -295,7 +362,6 @@ class Stack(collections.Mapping):
         s = {
             'name': self._backup_name() if backup else self.name,
             'raw_template_id': self.t.store(self.context),
-            'parameters': self.env.user_env_as_dict(),
             'owner_id': self.owner_id,
             'username': self.username,
             'tenant': self.tenant_id,
@@ -311,6 +377,7 @@ class Stack(collections.Mapping):
         }
         if self.id:
             db_api.stack_update(self.context, self.id, s)
+            self.update_dependencies()
         else:
             if not self.user_creds_id:
                 # Create a context containing a trust_id and trustor_user_id
@@ -327,13 +394,11 @@ class Stack(collections.Mapping):
             new_s = db_api.stack_create(self.context, s)
             self.id = new_s.id
             self.created_time = new_s.created_at
+            self.store_dependencies()
 
         self._set_param_stackid()
 
         return self.id
-
-    def _backup_name(self):
-        return '%s*' % self.name
 
     def identifier(self):
         '''
@@ -593,24 +658,19 @@ class Stack(collections.Mapping):
         self.state_set(action, self.IN_PROGRESS,
                        'Stack %s started' % action)
 
+        if self.action != self.CREATE:
+            db_api.update_resource_traversal(context=self.context,
+                                             stack_id=self.id,
+                                             traversed=False)
+
         stack_status = self.COMPLETE
         reason = 'Stack %s completed successfully' % action
 
-        def resource_action(r):
-            # Find e.g resource.create and call it
-            action_l = action.lower()
-            handle = getattr(r, '%s' % action_l)
-
-            # If a local _$action_kwargs function exists, call it to get the
-            # action specific argument list, otherwise an empty arg list
-            handle_kwargs = getattr(self,
-                                    '_%s_kwargs' % action_l, lambda x: {})
-            return handle(**handle_kwargs(r))
-
         action_task = scheduler.DependencyTaskGroup(
-            self.dependencies,
-            resource_action,
-            reverse,
+            self.context,
+            self.id,
+            task=self.converge,
+            reverse=reverse,
             error_wait_time=error_wait_time,
             aggregate_exceptions=aggregate_exceptions)
 
@@ -629,6 +689,28 @@ class Stack(collections.Mapping):
             post_func()
         lifecycle_plugin_utils.do_post_ops(self.context, self, None, action,
                                            (self.status == self.FAILED))
+    @scheduler.wrappertask
+    def resource_action(self, r):
+            # Find e.g resource.create and call it
+            action_l = self.action.lower()
+            handle = getattr(r, '%s' % action_l)
+
+            # If a local _$action_kwargs function exists, call it to get the
+            # action specific argument list, otherwise an empty arg list
+            handle_kwargs = getattr(self,
+                                    '_%s_kwargs' % action_l, lambda x: {})
+            yield handle(**handle_kwargs(r))
+
+    def converge(self, rsrc_name):
+        # Just look for stack action and take steps
+        res = self.resources[rsrc_name]
+        if self.action in (self.CREATE, self.ADOPT):
+            LOG.debug("==== Converging resource %s ", rsrc_name)
+            # Find e.g resource.create and call it
+            return self.resource_action(res)
+        else:
+            pass
+
 
     @profiler.trace('Stack.check', hide_args=False)
     def check(self):
@@ -695,7 +777,7 @@ class Stack(collections.Mapping):
         creator(timeout=self.timeout_secs())
 
     @profiler.trace('Stack.update', hide_args=False)
-    def update(self, newstack, event=None):
+    def update(self, newstack=None, event=None):
         '''
         Compare the current stack with newstack,
         and where necessary create/update/delete the resources until
@@ -707,13 +789,20 @@ class Stack(collections.Mapping):
         Update will fail if it exceeds the specified timeout. The default is
         60 minutes, set in the constructor
         '''
+        newstack.id = self.id
+        newstack.t.predecessor = self.t.id
+        newstack.action = self.action
+        newstack.status = self.status
+        newstack.status_reason = self.status_reason
+        newstack.store()
+
         self.updated_time = datetime.utcnow()
-        updater = scheduler.TaskRunner(self.update_task, newstack,
+        updater = scheduler.TaskRunner(newstack.update_task, self,
                                        event=event)
         updater()
 
     @scheduler.wrappertask
-    def update_task(self, newstack, action=UPDATE, event=None):
+    def update_task(self, oldstack, action=UPDATE, event=None):
         if action not in (self.UPDATE, self.ROLLBACK, self.RESTORE):
             LOG.error(_LE("Unexpected action %s passed to update!"), action)
             self.state_set(self.UPDATE, self.FAILED,
@@ -721,8 +810,8 @@ class Stack(collections.Mapping):
             return
 
         try:
-            lifecycle_plugin_utils.do_pre_ops(self.context, self,
-                                              newstack, action)
+            lifecycle_plugin_utils.do_pre_ops(self.context, oldstack,
+                                              self, action)
         except Exception as e:
             self.state_set(action, self.FAILED, e.args[0] if e.args else
                            'Failed stack pre-ops: %s' % six.text_type(e))
@@ -738,24 +827,22 @@ class Stack(collections.Mapping):
         self.state_set(action, self.IN_PROGRESS,
                        'Stack %s started' % action)
 
-        if action == self.UPDATE:
-            # Oldstack is useless when the action is not UPDATE , so we don't
-            # need to build it, this can avoid some unexpected errors.
-            oldstack = Stack(self.context, self.name, copy.deepcopy(self.t),
-                             self.env)
-        backup_stack = self._backup_stack()
+        old_template_id = self.t.predecessor
+
         try:
-            update_task = update.StackUpdate(self, newstack, backup_stack,
+            # 3. traverse the graph and update
+            # 4. deletion phase for resources
+            # 5. Clean up old raw_template
+            # self.timeout_mins = oldstack.timeout_mins
+            self._set_param_stackid()
+
+            # mark the graph as not traversed
+            db_api.update_resource_traversal(self.context, self.id, False)
+
+            update_task = update.StackUpdate(self,
                                              rollback=action == self.ROLLBACK,
                                              error_wait_time=ERROR_WAIT_TIME)
             updater = scheduler.TaskRunner(update_task)
-
-            self.env = newstack.env
-            self.parameters = newstack.parameters
-            self.t.files = newstack.t.files
-            self.disable_rollback = newstack.disable_rollback
-            self.timeout_mins = newstack.timeout_mins
-            self._set_param_stackid()
 
             try:
                 updater.start(timeout=self.timeout_secs())
@@ -798,16 +885,18 @@ class Stack(collections.Mapping):
                 # If rollback is enabled, we do another update, with the
                 # existing template, so we roll back to the original state
                 if not self.disable_rollback:
-                    yield self.update_task(oldstack, action=self.ROLLBACK)
+                    yield oldstack.update_task(None, action=self.ROLLBACK)
                     return
         else:
-            LOG.debug('Deleting backup stack')
-            backup_stack.delete(backup=True)
-
             # flip the template to the newstack values
-            self.t = newstack.t
+            #self.t = newstack.t
             template_outputs = self.t[self.t.OUTPUTS]
             self.outputs = self.resolve_static_data(template_outputs)
+            self.t.predecessor = None
+            self.t.store()
+
+            LOG.debug('Deleting old template')
+            db_api.raw_template_delete(self.context, old_template_id)
 
         # Don't use state_set to do only one update query and avoid race
         # condition with the COMPLETE status
@@ -816,8 +905,8 @@ class Stack(collections.Mapping):
         self.status_reason = reason
 
         self.store()
-        lifecycle_plugin_utils.do_post_ops(self.context, self,
-                                           newstack, action,
+        lifecycle_plugin_utils.do_post_ops(self.context, oldstack,
+                                           self, action,
                                            (self.status == self.FAILED))
 
         notification.send(self)
@@ -845,6 +934,9 @@ class Stack(collections.Mapping):
         reason = 'Stack %s completed successfully' % action
         self.state_set(action, self.IN_PROGRESS, 'Stack %s started' %
                        action)
+        db_api.update_resource_traversal(context=self.context,
+                                         stack_id=self.id,
+                                         traversed=False)
 
         backup_stack = self._backup_stack(False)
         if backup_stack:
@@ -904,7 +996,7 @@ class Stack(collections.Mapping):
                                e.args[0] if e.args else
                                'Failed stack pre-ops: %s' % six.text_type(e))
                 return
-        action_task = scheduler.DependencyTaskGroup(self.dependencies,
+        action_task = scheduler.DependencyTaskGroup(self.resources,
                                                     resource.Resource.destroy,
                                                     reverse=True)
         try:
@@ -987,6 +1079,12 @@ class Stack(collections.Mapping):
                                                None, action,
                                                (self.status == self.FAILED))
         if stack_status != self.FAILED:
+            # delete the stack resource graph
+            try:
+                db_api.graph_delete(self.context, self.id)
+            except Exception as e:
+                LOG.info(_("Failed to delete stack %s resource graph."),
+                         self.id)
             # delete the stack
             try:
                 db_api.stack_delete(self.context, self.id)

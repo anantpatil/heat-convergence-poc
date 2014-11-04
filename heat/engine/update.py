@@ -11,11 +11,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
-
+import copy
 from heat.common.i18n import _LI
 from heat.db import api as db_api
-from heat.engine import dependencies
 from heat.engine import resource
 from heat.engine import scheduler
 from heat.openstack.common import log as logging
@@ -28,171 +26,216 @@ class StackUpdate(object):
     A Task to perform the update of an existing stack to a new template.
     """
 
-    def __init__(self, existing_stack, new_stack, previous_stack,
-                 rollback=False, error_wait_time=None):
+    def __init__(self, stack, rollback=False, error_wait_time=None):
         """Initialise with the existing stack and the new stack."""
-        self.existing_stack = existing_stack
-        self.new_stack = new_stack
-        self.previous_stack = previous_stack
+        self.stack = stack
+        self.context = self.stack.context
+        self.stack_id = self.stack.id
 
         self.rollback = rollback
         self.error_wait_time = error_wait_time
 
-        self.existing_snippets = dict((n, r.frozen_definition())
-                                      for n, r in self.existing_stack.items())
+        self.current_snippets = dict((n, r.frozen_definition())
+                                     for n, r in self.stack.items())
 
     def __repr__(self):
         if self.rollback:
-            return '%s Rollback' % str(self.existing_stack)
+            return '%s Rollback' % str(self.stack)
         else:
-            return '%s Update' % str(self.existing_stack)
+            return '%s Update' % str(self.stack)
 
     @scheduler.wrappertask
     def __call__(self):
         """Return a co-routine that updates the stack."""
 
-        cleanup_prev = scheduler.DependencyTaskGroup(
-            self.previous_stack.dependencies,
-            self._remove_backup_resource,
-            reverse=True)
-
         self.updater = scheduler.DependencyTaskGroup(
-            self.dependencies(),
-            self._resource_update,
+            self.context,
+            self.stack_id,
+            self._update_resource,
             error_wait_time=self.error_wait_time)
 
-        if not self.rollback:
-            yield cleanup_prev()
+        self.gc = scheduler.DependencyTaskGroup(
+            self.context,
+            self.stack_id,
+            self._reclaim_resource_if_needed,
+            reverse=True)
 
-        try:
-            yield self.updater()
-        finally:
-            self.previous_stack.reset_dependencies()
+        yield self.updater()
 
-    def _resource_update(self, res):
-        if res.name in self.new_stack and self.new_stack[res.name] is res:
-            return self._process_new_resource_update(res)
+        # delete the old versions and delete resources from stack.
+        db_api.update_resource_traversal(self.context, self.stack_id,
+                                         traversed=False)
+        LOG.debug("==== Running GC...")
+        yield self.gc()
+
+    def _update_resource(self, res_name):
+        old_resource_db = db_api.resource_get_by_name_and_stack(
+            self.context, res_name, self.stack_id)
+        if res_name in self.current_snippets.keys():
+            # Resource is in new template, update it if it's in old template
+            # otherwise create a new one
+            new_resource = self.stack.resources[res_name]
+            if old_resource_db:
+                # update this
+                LOG.debug("==== Resource found in both old and new templates")
+                old_resource = resource.Resource.load(old_resource_db,
+                                                      self.stack)
+                return self._process_resource_update(new_resource, old_resource)
+            else:
+                # new resource to be created
+                LOG.debug("==== Resource found in new template only...creating it")
+                return self._create_resource(new_resource)
         else:
-            return self._process_existing_resource_update(res)
+            LOG.debug("==== Resource not found in new template...marking deleted.")
+            self._create_delete_version(old_resource_db)
+            return
+
+    def copyof(self, db_resource):
+        new_resource = resource.Resource.load(db_resource, self.stack)
+        return new_resource
+
+    def _create_delete_version(self, old_resource_db):
+            '''
+            Create a DELETE version in DB to be deleted in GC phase.
+            '''
+            old_resource = resource.Resource.load(old_resource_db,
+                                                  self.stack)
+            new_resource = self.copyof(old_resource_db)
+            new_resource.resource_id = old_resource.resource_id
+            new_resource.version = old_resource.version + 1
+            # to create new version in DB, reset id to None
+            new_resource.id = None
+            new_resource.store_update(old_resource.DELETE,
+                                      old_resource.INIT,
+                                      "Resource not in new template")
+
+            # set physical resource id to none for old resource
+            old_resource.resource_id = None
+            old_resource.store_update(old_resource.action,
+                                      old_resource.status,
+                                      old_resource.status_reason)
+            db_api.update_resource_traversal(
+                self.context, self.stack_id, traversed=True,
+                res_name=old_resource.name)
+
+
+    def _reclaim_resource_if_needed(self, res_name):
+        LOG.debug("==== Reclaiming older versions and deleted resources")
+        db_resource = db_api.resource_get_by_name_and_stack(
+            self.context, res_name, self.stack_id)
+        res = resource.Resource.load(db_resource,
+                                     self.stack)
+        # if resource is marked as DELETE, INIT, delete all versions
+        # and edges from graph
+        if (res.action, res.status) == (res.DELETE, res.INIT):
+            return self._delete_all_versions(res)
+        else:
+            return self._delete_older_versions(res)
 
     @scheduler.wrappertask
-    def _remove_backup_resource(self, prev_res):
-        if prev_res.state not in ((prev_res.INIT, prev_res.COMPLETE),
-                                  (prev_res.DELETE, prev_res.COMPLETE)):
-            LOG.debug("Deleting backup resource %s" % prev_res.name)
-            yield prev_res.destroy()
+    def _delete_all_versions(self, res):
+        LOG.debug("==== Reclaiming all versions of deleted resource %s", res.name)
+        # get the resource sorted by versions in descending order
+        db_resources = db_api.resource_get_all_versions_by_name_and_stack(
+            self.context, res.name, self.stack_id)
+        LOG.debug("==== resources returned in order:")
+        for res in db_resources:
+            LOG.debug("==== res_name: %s version %s", res.name, res.version)
+        for db_resource in db_resources:
+            res = resource.Resource.load(db_resource,
+                                         self.stack)
+            yield res.destroy()
+        self._delete_all_edges(res.name)
+        db_api.update_resource_traversal(self.context, self.stack_id,
+                                         traversed=True,
+                                         res_name=res.name)
 
-    @staticmethod
-    def _exchange_stacks(existing_res, prev_res):
-        db_api.resource_exchange_stacks(existing_res.stack.context,
-                                        existing_res.id, prev_res.id)
-        prev_stack, existing_stack = prev_res.stack, existing_res.stack
-        prev_stack.add_resource(existing_res)
-        existing_stack.add_resource(prev_res)
+    def _delete_all_edges(self, res_name):
+        '''
+        Delete all the edges from the graph
+        :param res_name:
+        :return:
+        '''
+        db_api.resource_graph_delete_all_edges(self.context, self.stack_id, res_name)
+
+    @scheduler.wrappertask
+    def _delete_older_versions(self, res):
+        '''
+        Only delete older versions
+        :param res:
+        :return:
+        '''
+        LOG.debug("==== Deleting older version for %s: ", res.name)
+        db_resources = db_api.resource_get_all_versions_by_name_and_stack(
+            self.context, res.name, self.stack_id)
+        if len(db_resources) == 1:
+            LOG.debug("==== No older version were found for %s: ", res.name)
+        else:
+            for db_res in db_resources[1:]:
+                if db_res.nova_instance:
+                    # physically remove
+                    LOG.debug("==== Physically removing resource: %s"
+                              " with version: %s", db_res.name, db_res.version)
+                    r = resource.Resource.load(db_res, self.stack)
+                    yield r.destroy()
+                else:
+                    # remove the DB entry
+                    LOG.debug("==== Removing resource from DB: %s "
+                              "version: %s", db_res.name, db_res.version)
+                    db_api.resource_delete(self.context, db_res.id)
+        db_api.update_resource_traversal(
+            self.context, self.stack_id, traversed=True, res_name=res.name)
 
     @scheduler.wrappertask
     def _create_resource(self, new_res):
-        res_name = new_res.name
-
-        # Clean up previous resource
-        if res_name in self.previous_stack:
-            prev_res = self.previous_stack[res_name]
-
-            if prev_res.state not in ((prev_res.INIT, prev_res.COMPLETE),
-                                      (prev_res.DELETE, prev_res.COMPLETE)):
-                # Swap in the backup resource if it is in a valid state,
-                # instead of creating a new resource
-                if prev_res.status == prev_res.COMPLETE:
-                    LOG.debug("Swapping in backup Resource %s" % res_name)
-                    self._exchange_stacks(self.existing_stack[res_name],
-                                          prev_res)
-                    return
-
-                LOG.debug("Deleting backup Resource %s" % res_name)
-                yield prev_res.destroy()
-
-        # Back up existing resource
-        if res_name in self.existing_stack:
-            LOG.debug("Backing up existing Resource %s" % res_name)
-            existing_res = self.existing_stack[res_name]
-            self.previous_stack.add_resource(existing_res)
-            existing_res.state_set(existing_res.UPDATE, existing_res.COMPLETE)
-
-        self.existing_stack.add_resource(new_res)
+        LOG.debug("==== Creating resource: %s", new_res.name)
+        new_res.action = new_res.INIT
+        new_res.status = new_res.COMPLETE
         yield new_res.create()
 
     @scheduler.wrappertask
-    def _process_new_resource_update(self, new_res):
-        res_name = new_res.name
-
-        if res_name in self.existing_stack:
-            existing_res = self.existing_stack[res_name]
-            try:
-                yield self._update_in_place(existing_res,
-                                            new_res)
-            except resource.UpdateReplace:
-                pass
+    def _process_resource_update(self, new_resource, old_resource):
+        res_name = new_resource.name
+        new_resource.version = old_resource.version + 1
+        LOG.debug("==== Processing update on resource %s: ", res_name)
+        try:
+            if new_resource.needs_update(old_resource.t):
+                LOG.debug("==== Resource %s needs update: ", res_name)
+                new_resource.id = None
+                new_resource.action = new_resource.UPDATE
+                new_resource.status = new_resource.INIT
+                new_resource.resource_id = old_resource.resource_id
+                new_resource.store()
+                LOG.debug("==== Created new version for %s ", res_name)
+                yield self._update_in_place(new_resource, old_resource.t)
             else:
-                LOG.info(_LI("Resource %(res_name)s for stack %(stack_name)s "
-                             "updated"),
-                         {'res_name': res_name,
-                          'stack_name': self.existing_stack.name})
+                LOG.info("==== Resource %s doesn't need update: ", res_name)
+                db_api.update_resource_traversal(
+                    self.context, self.stack_id, traversed=True, res_name=res_name)
                 return
+        except resource.UpdateReplace:
+            pass
+        else:
+            LOG.info(_LI("Resource %(res_name)s for stack %(stack_name)s "
+                         "updated"), {'res_name': res_name,
+                                      'stack_name': self.stack.name})
+            # remove physical resource id from prev version
+            old_resource.resource_id = None
+            old_resource.store_update()
+            return
 
-        yield self._create_resource(new_res)
+        LOG.debug("==== UpdateReplace failed, creating new %s", res_name)
+        yield self._create_resource(new_resource)
 
-    def _update_in_place(self, existing_res, new_res):
-        existing_snippet = self.existing_snippets[existing_res.name]
-        prev_res = self.previous_stack.get(new_res.name)
+    @scheduler.wrappertask
+    def _update_in_place(self, new_resource, old_rsrc_defn):
+        # existing_snippet = self.current_snippets[existing_res.name]
 
         # Note the new resource snippet is resolved in the context
         # of the existing stack (which is the stack being updated)
         # but with the template of the new stack (in case the update
         # is switching template implementations)
-        new_snippet = new_res.t.reparse(self.existing_stack,
-                                        self.new_stack.t)
-
-        return existing_res.update(new_snippet, existing_snippet,
-                                   prev_resource=prev_res)
-
-    @scheduler.wrappertask
-    def _process_existing_resource_update(self, existing_res):
-        res_name = existing_res.name
-
-        if res_name in self.previous_stack:
-            yield self._remove_backup_resource(self.previous_stack[res_name])
-
-        if res_name in self.new_stack:
-            new_res = self.new_stack[res_name]
-            if new_res.state == (new_res.INIT, new_res.COMPLETE):
-                # Already updated in-place
-                return
-
-        if existing_res.stack is not self.previous_stack:
-            yield existing_res.destroy()
-
-        if res_name not in self.new_stack:
-            self.existing_stack.remove_resource(res_name)
-
-    def dependencies(self):
-        '''
-        Return a Dependencies object representing the dependencies between
-        update operations to move from an existing stack definition to a new
-        one.
-        '''
-        existing_deps = self.existing_stack.dependencies
-        new_deps = self.new_stack.dependencies
-
-        def edges():
-            # Create/update the new stack's resources in create order
-            for e in new_deps.graph().edges():
-                yield e
-            # Destroy/cleanup the old stack's resources in delete order
-            for e in existing_deps.graph(reverse=True).edges():
-                yield e
-            # Don't cleanup old resources until after they have been replaced
-            for name, res in six.iteritems(self.existing_stack):
-                if name in self.new_stack:
-                    yield (res, self.new_stack[name])
-
-        return dependencies.Dependencies(edges())
+        #new_snippet = new_res.t.reparse(self.stack,
+                                        #self.new_template)
+        existing_snippet = old_rsrc_defn
+        return new_resource.update(new_resource.t, existing_snippet)

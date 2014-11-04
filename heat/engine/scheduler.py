@@ -11,6 +11,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import traceback as tb
 import functools
 import itertools
 import sys
@@ -24,6 +25,7 @@ import six
 
 from heat.common.i18n import _
 from heat.common.i18n import _LI
+from heat.db import api as db_api
 from heat.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -329,11 +331,11 @@ class DependencyTaskGroup(object):
     A task which manages a group of subtasks that have ordering dependencies.
     """
 
-    def __init__(self, dependencies, task=lambda o: o(),
+    def __init__(self, context, stack_id, task=lambda o: o(),
                  reverse=False, name=None, error_wait_time=None,
                  aggregate_exceptions=False):
         """
-        Initialise with the task dependencies and (optionally) a task to run on
+        Initialise with the resources and (optionally) a task to run on
         each.
 
         If no task is supplied, it is assumed that the tasks are stored
@@ -350,16 +352,21 @@ class DependencyTaskGroup(object):
         of the error will be cancelled). Once all chains are complete, any
         errors will be rolled up into an ExceptionGroup exception.
         """
-        self._runners = dict((o, TaskRunner(task, o)) for o in dependencies)
-        self._graph = dependencies.graph(reverse=reverse)
+        # self._runners = dict((o.name, TaskRunner(task, o)) \
+        #                    for o in resources.itervalues())
+        self._runners = dict()
+
+        self.reverse = reverse
         self.error_wait_time = error_wait_time
         self.aggregate_exceptions = aggregate_exceptions
 
         if name is None:
-            name = '(%s) %s' % (getattr(task, '__name__',
-                                        task_description(task)),
-                                six.text_type(dependencies))
+            name = '(%s)' % (getattr(task, '__name__',
+                                        task_description(task)))
         self.name = name
+        self.context = context
+        self.stack_id = stack_id
+        self.task = task
 
     def __repr__(self):
         """Return a string representation of the task."""
@@ -369,20 +376,32 @@ class DependencyTaskGroup(object):
     def __call__(self):
         """Return a co-routine which runs the task group."""
         raised_exceptions = []
-        while any(self._runners.itervalues()):
+        while True:
             try:
-                for k, r in self._ready():
-                    r.start()
+                d = self._ready()
+                LOG.debug("==== ready dict: %s", str(d))
+                if d or any(self._running()):
+                    for k, r in d.items():
+                        self._runners[k] = r
+                        LOG.debug("==== Started job")
+                        r.start()
 
-                yield
+                    yield
 
-                for k, r in self._running():
-                    if r.step():
-                        del self._graph[k]
+                    for k, r in self._running():
+                        r.step()
+                else:
+                    LOG.info("==== Done with all jobs")
+                    break
+
             except Exception:
                 exc_info = sys.exc_info()
+                var = tb.format_exc()
+                LOG.error("==== %s", str(var))
                 if self.aggregate_exceptions:
-                    self._cancel_recursively(k, r)
+                    # TODO: decision on whether to set traversed=True
+                    # self._cancel_recursively(k, r)
+                    pass
                 else:
                     self.cancel_all(grace_period=self.error_wait_time)
                 raised_exceptions.append(exc_info)
@@ -403,30 +422,40 @@ class DependencyTaskGroup(object):
 
     def _cancel_recursively(self, key, runner):
         runner.cancel()
-        node = self._graph[key]
-        for dependent_node in node.required_by():
-            node_runner = self._runners[dependent_node]
-            self._cancel_recursively(dependent_node, node_runner)
-
-        del self._graph[key]
+        for dependent_node in self.db_api.get_needed_by(self.context,
+                                                        self.stack_id, key):
+            self._cancel_recursively(dependent_node,
+                                     self._runners[dependent_node])
+        db_api.update_resource_traversal(context=self.context,
+                                         stack_id=self.stack_id,
+                                         traversed=True, res_name=key)
 
     def _ready(self):
         """
         Iterate over all subtasks that are ready to start - i.e. all their
         dependencies have been satisfied but they have not yet been started.
         """
-        for k, n in six.iteritems(self._graph):
-            if not n:
-                runner = self._runners[k]
-                if runner and not runner.started():
-                    yield k, runner
+        ready_resources = self._get_ready_resources_from_db(self.reverse)
+        LOG.debug('Ready_Resources %s' % ready_resources)
+        d = dict()
+        for rsrc_name in ready_resources:
+            # create task runners and store in _runners
+            if rsrc_name not in self._runners.keys():
+                d[rsrc_name] = TaskRunner(self.task, rsrc_name)
+        return d
+
+    def _get_ready_resources_from_db(self, reverse=False):
+        return db_api.get_ready_resources(self.context,
+                                          stack_id=self.stack_id,
+                                          reverse=reverse)
 
     def _running(self):
         """
         Iterate over all subtasks that are currently running - i.e. they have
         been started but have not yet completed.
         """
-        running = lambda (k, r): k in self._graph and r.started()
+        running = lambda (k, r): k in self._get_ready_resources_from_db(
+            self.reverse) and r.started()
         return itertools.ifilter(running, six.iteritems(self._runners))
 
 

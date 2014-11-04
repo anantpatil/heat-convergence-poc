@@ -15,6 +15,8 @@ import copy
 import itertools
 import operator
 
+from hashlib import sha1
+
 from heat.common import exception
 
 from heat.engine import function
@@ -65,6 +67,7 @@ class ResourceDefinitionCore(object):
 
         self._hash = hash(self.resource_type)
         self._rendering = None
+        self._sha1_hash = None
 
         assert isinstance(description, basestring)
 
@@ -118,6 +121,16 @@ class ResourceDefinitionCore(object):
         defn = type(self)(**dict(arg_item(a) for a in args))
         defn._frozen = True
         return defn
+
+    @property
+    def sha1_hash(self):
+        assert getattr(self, '_frozen', False), \
+            "SHA1 hash computed for frozen definition"
+        if not self._sha1_hash:
+            sha = sha1()
+            sha.update(str(self))
+            self._sha1_hash = sha.hexdigest()
+        return self._sha1_hash
 
     def reparse(self, stack, template):
         """
@@ -278,10 +291,10 @@ class ResourceDefinitionCore(object):
 
 
 _KEYS = (
-    TYPE, PROPERTIES, METADATA, DELETION_POLICY, UPDATE_POLICY,
+    NAME, TYPE, PROPERTIES, METADATA, DELETION_POLICY, UPDATE_POLICY,
     DEPENDS_ON, DESCRIPTION,
 ) = (
-    'Type', 'Properties', 'Metadata', 'DeletionPolicy', 'UpdatePolicy',
+    'Name', 'Type', 'Properties', 'Metadata', 'DeletionPolicy', 'UpdatePolicy',
     'DependsOn', 'Description',
 )
 
@@ -316,6 +329,41 @@ class ResourceDefinition(ResourceDefinitionCore, collections.Mapping):
 
         return super(ResourceDefinition, self).__eq__(other)
 
+    @classmethod
+    def from_dict(cls, data, sha1_sum):
+        """
+        Form a ResourceDefinition object from the frozen defintion.
+
+        :param data: Frozen definition as obtained from freeze()
+        :return: An instance of ResourceDefinitionCore
+        """
+        '''
+        rsrc_defn = cls(data.get(NAME), data.get(TYPE),
+                        properties=dict(data.get(PROPERTIES)),
+                        metadata=dict(data.get(METADATA)),
+                        deletion_policy=dict(data.get(DELETION_POLICY)),
+                        update_policy=dict(data.get(UPDATE_POLICY)),
+                        depends=dict(data.get(DEPENDS_ON)),
+                        description=dict(data.get(DESCRIPTION)))
+        '''
+        rsrc_defn = cls(data.get(NAME), data.get(TYPE),
+                        properties=data.get(PROPERTIES),
+                        metadata=data.get(METADATA),
+                        deletion_policy=data.get(DELETION_POLICY),
+                        update_policy=data.get(UPDATE_POLICY),
+                        depends=data.get(DEPENDS_ON),
+                        description=data.get(DESCRIPTION, ''))
+
+        rsrc_defn._frozen = True
+        rsrc_defn._sha1_hash = sha1_sum
+        return rsrc_defn
+
+    @classmethod
+    def from_json(cls, json_text, sha1_hash):
+        import json
+        data = json.loads(json_text)
+        return cls.from_dict(data, sha1_hash)
+
     def __iter__(self):
         """
         Iterate over the available CFN template keys.
@@ -323,6 +371,7 @@ class ResourceDefinition(ResourceDefinitionCore, collections.Mapping):
         This is for backwards compatibility with existing code that expects a
         parsed-JSON template snippet.
         """
+        yield NAME
         yield TYPE
         if self._properties is not None:
             yield PROPERTIES
@@ -344,7 +393,9 @@ class ResourceDefinition(ResourceDefinitionCore, collections.Mapping):
         This is for backwards compatibility with existing code that expects a
         parsed-JSON template snippet.
         """
-        if key == TYPE:
+        if key == NAME:
+            return self.name
+        elif key == TYPE:
             return self.resource_type
         elif key == PROPERTIES:
             if self._properties is not None:

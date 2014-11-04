@@ -108,9 +108,19 @@ def raw_template_update(context, template_id, values):
                   if getattr(raw_template_ref, k) != v)
 
     if values:
-        raw_template_ref.update_and_save(values)
+        session = _session(context)
+        raw_template_ref.update(values)
+        raw_template_ref.save(session)
+        session.flush()
 
     return raw_template_ref
+
+
+def raw_template_delete(context, template_id):
+    t = raw_template_get(context, template_id)
+    session = Session.object_session(t)
+    session.delete(t)
+    session.flush()
 
 
 def resource_get(context, resource_id):
@@ -122,12 +132,40 @@ def resource_get(context, resource_id):
     return result
 
 
-def resource_get_by_name_and_stack(context, resource_name, stack_id):
-    result = model_query(context, models.Resource).\
-        filter_by(name=resource_name).\
-        filter_by(stack_id=stack_id).\
-        options(orm.joinedload("data")).first()
+def resource_get_by_name_and_stack(context, resource_name, stack_id, version=None):
+    if version:
+        result = model_query(context, models.Resource).\
+            filter_by(name=resource_name).\
+            filter_by(stack_id=stack_id). \
+            filter_by(version=version).\
+            options(orm.joinedload("data")).first()
+    else:
+        from sqlalchemy import func
+        result = model_query(context, models.Resource).\
+            filter_by(name=resource_name).\
+            filter_by(stack_id=stack_id).\
+            filter(models.Resource.version.in_(
+                model_query(context, func.max(models.Resource.version)).\
+                filter_by(name=resource_name, stack_id=stack_id).subquery())).\
+            options(orm.joinedload("data")).first()
+
     return result
+
+
+def resource_get_all_versions_by_name_and_stack(context, resource_name, stack_id):
+    result = model_query(context, models.Resource). \
+        filter_by(name=resource_name). \
+        filter_by(stack_id=stack_id). \
+        order_by(models.Resource.version.desc()). \
+        options(orm.joinedload("data")).all()
+    return result
+
+
+def resource_delete(context, resource_id):
+    r = resource_get(context, resource_id)
+    session = _session(context)
+    session.delete(r)
+    session.flush()
 
 
 def resource_get_by_physical_resource_id(context, physical_resource_id):
@@ -434,6 +472,27 @@ def stack_delete(context, stack_id):
         session.delete(r)
 
     s.soft_delete(session=session)
+    session.flush()
+
+
+def stack_delete_hard(context, stack_id):
+    s = stack_get(context, stack_id)
+    if not s:
+        raise exception.NotFound(_('Attempt to hard-delete a stack with id: '
+                                 '%(id)s %(msg)s') % {
+                                     'id': stack_id,
+                                     'msg': 'that does not exist'})
+
+    session = Session.object_session(s)
+
+    for r in s.resources:
+        session.delete(r)
+
+    for e in s.events:
+        session.delete(e)
+
+    session.delete(s)
+
     session.flush()
 
 
@@ -860,3 +919,150 @@ def db_sync(engine, version=None):
 def db_version(engine):
     """Display the current database version."""
     return migration.db_version(engine)
+
+
+class Transaction():
+    def __init__(self, context):
+        self.session = _session(context)
+
+    def __enter__(self):
+        self.session.begin()
+        return self.session
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not exc_type:
+            self.session.commit()
+
+
+def graph_insert_egde(context, value):
+    obj_ref = models.ResourceGraph()
+    obj_ref.update(value)
+    obj_ref.save(_session(context))
+    return obj_ref
+
+
+def graph_delete_egde(context, value):
+    session = _session(context)
+    session.query(models.ResourceGraph).filter_by(**value).delete()
+
+
+def graph_update(context, values):
+    """
+    Updates the graph table with the values. If a graph edge does
+    not exists in the database then add that edge.
+    """
+    session = _session(context)
+    with session.begin():
+        for val in values:
+            edge = session.query(models.ResourceGraph).filter_by(**val)
+            if edge.scalar():
+                edge.update(val)
+            else:
+                session.add(models.ResourceGraph(**val))
+
+
+def graph_get_all_by_stack(context, stack_id):
+    """ Retrieves all the edges of the graph for the given stack. """
+    result = model_query(context, models.ResourceGraph).filter_by(
+                 stack_id=stack_id).all()
+    return result
+
+
+def graph_delete(context, stack_id):
+    """ Deletes all the edges of the graph for the given stack. """
+    session = _session(context)
+    with session.begin():
+        session.query(models.ResourceGraph).filter_by(stack_id=stack_id).delete()
+    session.flush()
+
+
+def get_resource_required_by(context, stack_id, resource_name):
+    result = model_query(context, models.ResourceGraph.needed_by).filter_by(
+                            resource_name=resource_name, stack_id=stack_id).all()
+    return [res for (res,) in result if res]
+
+
+def resource_exists_in_graph(context, stack_id, resource_name):
+    result = model_query(context, models.ResourceGraph.resource_name).filter_by(
+                            resource_name=resource_name, stack_id=stack_id).all()
+    return True if result else False
+
+
+'''
+def get_ready_resources(context, stack_id, reverse):
+    if reverse:
+        results = [x for (x, ) in model_query(
+            context, models.ResourceGraph.resource_name).\
+            filter_by(traversed=False, stack_id=stack_id).\
+            filter(models.ResourceGraph.needed_by.in_(
+                model_query(context, models.ResourceGraph.needed_by).filter_by(
+                    traversed=True, stack_id=stack_id).subquery()
+            )).distinct().all()]
+    else:
+        results = [x for (x, ) in model_query(
+            context, models.ResourceGraph.resource_name).
+            filter_by(traversed=False, stack_id=stack_id).\
+            filter(~models.ResourceGraph.resource_name.in_(
+                model_query(context, models.ResourceGraph.needed_by).filter_by(
+                    traversed=False, stack_id=stack_id).subquery()
+            )).distinct().all()]
+    return results
+'''
+
+
+def get_ready_resources(context, stack_id, reverse):
+    if reverse:
+        results = [x for (x, ) in model_query(
+            context, models.ResourceGraph.resource_name).\
+            filter_by(traversed=False, stack_id=stack_id, needed_by="").\
+            distinct().all()]
+        if results:
+            return results
+
+        results = [x for (x, ) in model_query(
+            context, models.ResourceGraph.resource_name).\
+            filter_by(traversed=False, stack_id=stack_id).\
+            filter(models.ResourceGraph.needed_by.in_(
+                model_query(context, models.ResourceGraph.resource_name)\
+                .filter_by(traversed=True, stack_id=stack_id).subquery()
+            )).distinct().all()]
+    else:
+        results = [x for (x, ) in model_query(
+            context, models.ResourceGraph.resource_name).
+            filter_by(traversed=False, stack_id=stack_id).\
+            filter(~models.ResourceGraph.resource_name.in_(
+                model_query(context, models.ResourceGraph.needed_by).filter_by(
+                    traversed=False, stack_id=stack_id).subquery()
+            )).distinct().all()]
+    return results
+
+
+def update_resource_traversal(context, stack_id, res_name=None,
+                              traversed=False):
+    filters = {'stack_id': stack_id}
+    if res_name:
+        filters['resource_name'] = res_name
+    session = _session(context)
+    with session.begin():
+        session.query(models.ResourceGraph).\
+            filter_by(**filters).\
+            update({"traversed": traversed})
+    session.flush()
+
+
+def resource_graph_delete_all_edges(context, stack_id, res_name):
+    from sqlalchemy import or_
+    session = _session(context)
+    with session.begin():
+        session.query(models.ResourceGraph).\
+                      filter_by(stack_id=stack_id).\
+                      filter(or_(models.ResourceGraph.resource_name == res_name,
+                        models.ResourceGraph.needed_by == res_name)).delete()
+    session.flush()
+
+
+def resource_delete(context, resource_id):
+    resource = resource_get(context, resource_id)
+    session = Session.object_session(resource)
+    session.delete(resource)
+    session.flush()

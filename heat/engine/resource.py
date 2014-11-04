@@ -11,6 +11,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 import base64
 import contextlib
 from datetime import datetime
@@ -81,8 +82,8 @@ class Resource(object):
         'SUSPEND', 'RESUME', 'ADOPT', 'SNAPSHOT', 'CHECK',
     )
 
-    STATUSES = (IN_PROGRESS, FAILED, COMPLETE
-                ) = ('IN_PROGRESS', 'FAILED', 'COMPLETE')
+    STATUSES = (INIT, IN_PROGRESS, FAILED, COMPLETE
+                ) = ('INIT', 'IN_PROGRESS', 'FAILED', 'COMPLETE')
 
     # If True, this resource must be created before it can be referenced.
     strict_dependency = True
@@ -108,7 +109,7 @@ class Resource(object):
     # Default name to use for calls to self.client()
     default_client_name = None
 
-    def __new__(cls, name, definition, stack):
+    def __new__(cls, name, definition, stack, version=0):
         '''Create a new Resource of the appropriate class for its type.'''
 
         assert isinstance(definition, rsrc_defn.ResourceDefinition)
@@ -148,7 +149,7 @@ class Resource(object):
 
         return super(Resource, cls).__new__(ResourceClass)
 
-    def __init__(self, name, definition, stack):
+    def __init__(self, name, definition, stack, version=0):
         if '/' in name:
             raise ValueError(_('Resource name may not contain "/"'))
 
@@ -177,10 +178,25 @@ class Resource(object):
         self._stored_properties_data = None
         self.created_time = None
         self.updated_time = None
+        self.version = version
+        self._frozen_defn = None
 
-        resource = stack.db_resource_get(name)
+        resource = db_api.resource_get_by_name_and_stack(
+            self.stack.context, self.name, self.stack.id,
+            version=self.version)
         if resource:
             self._load_data(resource)
+
+    @classmethod
+    def load(cls, db_resource, stack):
+        return cls._from_db(db_resource, stack)
+
+    @classmethod
+    def _from_db(cls, db_resource, stack):
+        r_defn = rsrc_defn.ResourceDefinition.from_json(
+            db_resource.rsrc_defn, db_resource.rsrc_defn_hash)
+        return cls(db_resource.name, r_defn, stack,
+                   version=db_resource.version)
 
     def _load_data(self, resource):
         '''Load the resource state from its DB representation.'''
@@ -197,6 +213,8 @@ class Resource(object):
         self._stored_properties_data = resource.properties_data
         self.created_time = resource.created_at
         self.updated_time = resource.updated_at
+        self._frozen_defn = rsrc_defn.ResourceDefinition.from_json(
+            resource.rsrc_defn, resource.rsrc_defn_hash)
 
     def reparse(self):
         self.properties = self.t.properties(self.properties_schema,
@@ -295,11 +313,14 @@ class Resource(object):
         return function.resolve(template)
 
     def frozen_definition(self):
-        if self._stored_properties_data is not None:
-            args = {'properties': self._stored_properties_data}
-        else:
-            args = {}
-        return self.t.freeze(**args)
+        if not self._frozen_defn:
+            if self._stored_properties_data is not None:
+                args = {'properties': self._stored_properties_data}
+            else:
+                args = {}
+            self._frozen_defn = self.t.freeze(**args)
+
+        return self._frozen_defn
 
     def update_template_diff(self, after, before):
         '''
@@ -461,6 +482,12 @@ class Resource(object):
                     LOG.exception(_('Error marking resource as failed'))
         else:
             self.state_set(action, self.COMPLETE)
+#            if action == self.CREATE:
+                # once the resource is successfully created set traversed=True
+            db_api.update_resource_traversal(context=self.context,
+                                             stack_id=self.stack.id,
+                                             traversed=True,
+                                             res_name=self.name)
 
     def action_handler_task(self, action, args=[], action_prefix=None):
         '''
@@ -659,6 +686,15 @@ class Resource(object):
         except ValueError:
             return True
 
+    def needs_update(self, before):
+        assert isinstance(before, rsrc_defn.ResourceDefinition)
+        after = self.frozen_definition()
+        before_props = before.properties(self.properties_schema,
+                                         self.context)
+        after_props = after.properties(self.properties_schema,
+                                       self.context)
+        return self._needs_update(after, before, after_props, before_props, None)
+
     @scheduler.wrappertask
     def update(self, after, before=None, prev_resource=None):
         '''
@@ -676,10 +712,6 @@ class Resource(object):
                                          self.context)
         after_props = after.properties(self.properties_schema,
                                        self.context)
-
-        if not self._needs_update(after, before, after_props, before_props,
-                                  prev_resource):
-            return
 
         if (self.action, self.status) in ((self.CREATE, self.IN_PROGRESS),
                                           (self.UPDATE, self.IN_PROGRESS),
@@ -876,9 +908,17 @@ class Resource(object):
             except Exception as ex:
                 LOG.warn(_LW('db error %s'), ex)
 
+    def store(self):
+        self._store()
+
+    def store_update(self, action, status, reason):
+        self._store_or_update(action, status, reason)
+
     def _store(self):
         '''Create the resource in the database.'''
+        LOG.info("==== storing the new resource")
         metadata = self.metadata_get()
+        rsrc_defn_json = json.dumps(dict(self.frozen_definition()))
         try:
             rs = {'action': self.action,
                   'status': self.status,
@@ -888,7 +928,10 @@ class Resource(object):
                   'name': self.name,
                   'rsrc_metadata': metadata,
                   'properties_data': self._stored_properties_data,
-                  'stack_name': self.stack.name}
+                  'stack_name': self.stack.name,
+                  'rsrc_defn': rsrc_defn_json,
+                  'rsrc_defn_hash': self._frozen_defn.sha1_hash,
+                  'version': self.version}
 
             new_rs = db_api.resource_create(self.context, rs)
             self.id = new_rs.id
@@ -906,11 +949,13 @@ class Resource(object):
         ev.store()
 
     def _store_or_update(self, action, status, reason):
+        LOG.info("==== inside state_or_update")
         self.action = action
         self.status = status
         self.status_reason = reason
-
+        rsrc_defn_json = json.dumps(dict(self.frozen_definition()))
         if self.id is not None:
+            LOG.info("==== Update resource with id %s", self.id)
             try:
                 rs = db_api.resource_get(self.context, self.id)
                 rs.update_and_save({
@@ -920,7 +965,10 @@ class Resource(object):
                     'stack_id': self.stack.id,
                     'updated_at': self.updated_time,
                     'properties_data': self._stored_properties_data,
-                    'nova_instance': self.resource_id})
+                    'nova_instance': self.resource_id,
+                    'rsrc_defn': rsrc_defn_json,
+                    'rsrc_defn_hash': self._frozen_defn.sha1_hash,
+                    'version': self.version})
             except Exception as ex:
                 LOG.error(_LE('DB error %s'), ex)
 
@@ -928,7 +976,8 @@ class Resource(object):
         # all other transitions (other than to DELETE_COMPLETE)
         # should be handled by the update_and_save above..
         elif (action, status) in [(self.CREATE, self.IN_PROGRESS),
-                                  (self.ADOPT, self.IN_PROGRESS)]:
+                                  (self.ADOPT, self.IN_PROGRESS),
+                                  (self.DELETE, self.INIT)]:
             self._store()
 
     def _resolve_attribute(self, name):
@@ -950,6 +999,7 @@ class Resource(object):
         self.status = self.COMPLETE
 
     def state_set(self, action, status, reason="state changed"):
+        LOG.info("==== in set_state")
         if action not in self.ACTIONS:
             raise ValueError(_("Invalid action %s") % action)
 
@@ -959,6 +1009,8 @@ class Resource(object):
         old_state = (self.action, self.status)
         new_state = (action, status)
         self._store_or_update(action, status, reason)
+
+        LOG.info("==== resource stored")
 
         if new_state != old_state:
             self._add_event(action, status, reason)
