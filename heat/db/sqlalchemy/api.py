@@ -1003,54 +1003,53 @@ def get_ready_resources(context, stack_id, reverse):
 '''
 
 
-def get_ready_resources(context, stack_id, reverse):
+def get_ready_resources(context, stack_id, reverse, exclude=[]):
+    rg = models.ResourceGraph
     if reverse:
         results = [x for (x, ) in model_query(
             context, models.ResourceGraph.resource_name).\
-            filter_by(traversed=False, stack_id=stack_id, needed_by="").\
+            filter_by(status=models.ResourceGraph.UNPROCESSED, stack_id=stack_id, needed_by="").\
             distinct().all()]
         if results:
             return results
 
         results = [x for (x, ) in model_query(
             context, models.ResourceGraph.resource_name).\
-            filter_by(traversed=False, stack_id=stack_id).\
+            filter_by(status=models.ResourceGraph.UNPROCESSED, stack_id=stack_id).\
             filter(models.ResourceGraph.needed_by.in_(
                 model_query(context, models.ResourceGraph.resource_name)\
-                .filter_by(traversed=True, stack_id=stack_id).subquery()
+                .filter_by(status=models.ResourceGraph.PROCESSED, stack_id=stack_id).subquery()
             )).distinct().all()]
     else:
-        results = [x for (x, ) in model_query(
-            context, models.ResourceGraph.resource_name).
-            filter_by(traversed=False, stack_id=stack_id).\
-            filter(~models.ResourceGraph.resource_name.in_(
-                model_query(context, models.ResourceGraph.needed_by).filter_by(
-                    traversed=False, stack_id=stack_id).subquery()
-            )).distinct().all()]
-    return results
+        query = model_query(context, rg.resource_name, rg.status).\
+                filter(rg.status != rg.PROCESSED).\
+                filter(rg.stack_id==stack_id).\
+                filter(~rg.resource_name.in_(exclude)).\
+                filter(~rg.resource_name.in_(model_query(context, rg.needed_by).\
+                                             filter(rg.status != rg.PROCESSED).\
+                                             filter(rg.stack_id == stack_id).subquery()))
+        return query.distinct().all()
 
-
-def update_resource_traversal(context, stack_id, res_name=None,
-                              traversed=False):
+def update_resource_traversal(context, stack_id, status, resource_name=None):
     filters = {'stack_id': stack_id}
-    if res_name:
-        filters['resource_name'] = res_name
+    if resource_name:
+        filters['resource_name'] = resource_name
     session = _session(context)
     with session.begin():
         session.query(models.ResourceGraph).\
             filter_by(**filters).\
-            update({"traversed": traversed})
+            update({"status": status})
     session.flush()
 
 
-def resource_graph_delete_all_edges(context, stack_id, res_name):
+def resource_graph_delete_all_edges(context, stack_id, resource_name):
     from sqlalchemy import or_
     session = _session(context)
     with session.begin():
         session.query(models.ResourceGraph).\
             filter_by(stack_id=stack_id).\
-            filter(or_(models.ResourceGraph.resource_name == res_name,
-                       models.ResourceGraph.needed_by == res_name)).\
+            filter(or_(models.ResourceGraph.resource_name == resource_name,
+                       models.ResourceGraph.needed_by == resource_name)).\
             delete()
     session.flush()
 
@@ -1060,10 +1059,3 @@ def resource_delete(context, resource_id):
     session = Session.object_session(resource)
     session.delete(resource)
     session.flush()
-
-
-def get_untraversed_edges(context, stack_id):
-    result = model_query(context, models.ResourceGraph.resource_name,
-                         models.ResourceGraph.needed_by).filter_by(
-                             traversed=False, stack_id=stack_id).all()
-    return result

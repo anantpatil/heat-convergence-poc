@@ -621,21 +621,19 @@ class EngineService(service.Service):
         return api.format_stack_preview(stack)
 
     @request_context
-    def converge_resource(self, cnxt, stack_id, resource_name, action):
+    def converge_resource(self, cnxt, stack_id, resource_name):
         #TODO(ishant) : Remove this method as this is only test code.
         stack = parser.Stack.load(cnxt, stack_id)
         db_api.update_resource_traversal(context=cnxt,
                                          stack_id=stack_id,
-                                         traversed=True,
-                                         resource=resource_name)
-        res = db_api.resource_get_by_name_and_stack(cnxt, resource_name,
+                                         status="PROCESSED",
+                                         resource_name=resource_name)
+        dbres = db_api.resource_get_by_name_and_stack(cnxt, resource_name,
                                                     stack_id)
-        if not res:
-            from heat.engine import resource
-            defn = stack.t.resource_definitions(self).get(resource_name)
-            res = resource.Resource(resource_name, defn, stack)
-            res.store()
-        stack.trigger_convergence()
+        from heat.engine import resource
+        res = resource.Resource.load(dbres, stack)
+        res.state_set(res.CREATE, res.COMPLETE)
+        stack.process_ready_resources(stack.action)
 
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
@@ -669,7 +667,7 @@ class EngineService(service.Service):
 
                 stack.adopt()
             else:
-                stack.trigger_convergence()
+                stack.create_start()
 
             if (stack.action in (stack.CREATE, stack.ADOPT)
                     and stack.status == stack.COMPLETE):

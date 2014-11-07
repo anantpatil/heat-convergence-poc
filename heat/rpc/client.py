@@ -525,8 +525,7 @@ class EngineClient(object):
         return self.call(cnxt, self.make_msg('stack_list_snapshots',
                                              stack_identity=stack_identity))
 
-    def converge_resource(self, cnxt, stack_id, resource_name, action):
+    def converge_resource(self, cnxt, stack_id, resource_name):
         return self.cast(cnxt, self.make_msg('converge_resource',
                                              stack_id=stack_id,
-                                             resource_name=resource_name,
-                                             action=action))
+                                             resource_name=resource_name))

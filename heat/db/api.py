@@ -100,7 +100,8 @@ def resource_get_all_by_stack(context, stack_id):
     return IMPL.resource_get_all_by_stack(context, stack_id)
 
 
-def resource_get_by_name_and_stack(context, resource_name, stack_id, version=None):
+def resource_get_by_name_and_stack(context, resource_name, stack_id,
+                                   version=None):
     return IMPL.resource_get_by_name_and_stack(context,
                                                resource_name, stack_id,
                                                version=version)
@@ -353,22 +354,24 @@ def resource_exists_in_graph(context, stack_id, resource_name):
     return IMPL.resource_exists_in_graph(context, stack_id, resource_name)
 
 
-def get_ready_resources(context, stack_id, reverse=False):
-        return IMPL.get_ready_resources(context, stack_id, reverse)
+def get_ready_resources(context, stack_id, reverse=False, exclude=[]):
+        return IMPL.get_ready_resources(context, stack_id, reverse, exclude)
 
 
-def update_resource_traversal(context, stack_id, traversed, res_name=None):
-    return IMPL.update_resource_traversal(context, stack_id,
-                                          res_name, traversed)
+def update_resource_traversal(context, stack_id, status, resource_name=None):
+    return IMPL.update_resource_traversal(context, stack_id, status,
+                                          resource_name)
 
 
-def resource_get_all_versions_by_name_and_stack(context, resource_name, stack_id):
+def resource_get_all_versions_by_name_and_stack(context, resource_name,
+                                                stack_id):
     return IMPL.resource_get_all_versions_by_name_and_stack(
         context, resource_name, stack_id)
 
 
-def resource_graph_delete_all_edges(context, stack_id, res_name):
-    return IMPL.resource_graph_delete_all_edges(context, stack_id, res_name)
+def resource_graph_delete_all_edges(context, stack_id, resource_name):
+    return IMPL.resource_graph_delete_all_edges(context, stack_id,
+                                                resource_name)
 
 
 def resource_delete(context, resource_id):

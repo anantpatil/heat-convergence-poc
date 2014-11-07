@@ -270,61 +270,49 @@ class Stack(collections.Mapping):
                                  'stack_id': self.id }
                         db_api.graph_insert_egde(self.context, value)
 
-    def _is_stack_complete(self):
-        edges = db_api.get_untraversed_edges(context=self.context,
-                                             stack_id=self.id)
-        return not edges
+    def _is_resource_updated(self, rsrc_name):
+        return False
 
-    def _get_resource_action(self, res):
-        if self.action == self.CREATE:
-            return self.CREATE
-
-        new_res = self.resources[res]
-        old_res = db_api.resource_get_by_name_and_stack(context=self.context,
-                                                        resource_name=res,
-                                                        stack_id=self.id)
-        if old_res:
-            old_rsrc_defn = rsrc_defn.ResourceDefinition.from_dict(
-                                json.loads(old_res.rsrc_defn))
-            if new_res.needs_update(old_rsrc_defn):
-                return self.UPDATE
-            else:
-                return None
-        else:
-            return self.CREATE
-
-    def _get_ready_resources(self):
-        resources = db_api.get_ready_resources(context=self.context,
+    def _eval_ready_leaves(self, stack_action, reverse):
+        change_list = []
+        while True:
+            resource_names = [name for name, status in change_list]
+            nodes = db_api.get_ready_resources(context=self.context,
                                                stack_id=self.id,
-                                               reverse=False)
-        changed_resources = []
-        unchanged_resources = []
-        for res in resources:
-            resource_action = self._get_resource_action(res)
-            if resource_action:
-                changed_resources.append({'resource':res,
-                                          'action': resource_action})
-            else:
-                unchanged_resources.append(res)
-        if unchanged_resources:
-            for res in unchanged_resources:
-                db_api.update_resource_traversal(context=self.context,
-                                                 stack_id=self.id,
-                                                 traversed=True,
-                                                 resource=res)
-            return self._get_ready_resources()
-        return changed_resources
+                                               reverse=reverse,
+                                               exclude=resource_names)
+            if stack_action != self.UPDATE:
+                return nodes
+            elif not nodes:
+                return change_list
+            for name, status in nodes:
+                if self._is_resource_updated(name):
+                    change_list.append((name, status))
+                else:
+                    db_api.update_resource_traversal(context=self.context,
+                                                     stack_id=self.id,
+                                                     status='PROCESSED',
+                                                     resource_name=name)
 
-    def trigger_convergence(self):
-        resources = self._get_ready_resources()
-        if not resources and self._is_stack_complete():
-            reason = 'Stack %s completed successfully' % self.action
-            self.state_set(self.action, self.COMPLETE, reason)
+    def process_ready_resources(self, stack_action, reverse=False):
+        nodes = self._eval_ready_leaves(stack_action, reverse)
+        if not nodes:
+            action = stack_action.lower()
+            complete_action = getattr(self, '%s_complete' % action, None)
+            if callable(complete_action):
+                complete_action()
             return
 
-        for res in resources:
-            self.rpc_client.converge_resource(self.context, self.id,
-                                              res['resource'], res['action'])
+        def converge_resource(rsrc_name):
+            db_api.update_resource_traversal(context=self.context,
+                                             stack_id=self.id,
+                                             status='PROCESSING',
+                                             resource_name=rsrc_name)
+            self.rpc_client.converge_resource(self.context,
+                                              self.id,
+                                              rsrc_name)
+        [converge_resource(rsrc_name) for rsrc_name, status in nodes
+                                          if status == 'UNPROCESSED']
 
     def reset_dependencies(self):
         self._dependencies = None
@@ -690,6 +678,16 @@ class Stack(collections.Mapping):
                                        error_wait_time=ERROR_WAIT_TIME)
         creator(timeout=self.timeout_secs())
 
+    def create_start(self):
+        for res in self._resources.values():
+            res.state_set(res.CREATE, res.INIT)
+        self.process_ready_resources(self.CREATE)
+
+    def create_complete(self):
+        #(TODO) : Handle failure
+        reason = 'Stack %s completed successfully' % self.action
+        self.state_set(self.action, self.COMPLETE, reason)
+
     def _adopt_kwargs(self, resource):
         data = self.adopt_stack_data
         if not data or not data.get('resources'):
@@ -720,7 +718,7 @@ class Stack(collections.Mapping):
         if self.action != self.CREATE:
             db_api.update_resource_traversal(context=self.context,
                                              stack_id=self.id,
-                                             traversed=False)
+                                             traversed="UNPROCESSED")
 
         stack_status = self.COMPLETE
         reason = 'Stack %s completed successfully' % action
@@ -885,7 +883,8 @@ class Stack(collections.Mapping):
             self._set_param_stackid()
 
             # mark the graph as not traversed
-            db_api.update_resource_traversal(self.context, self.id, False)
+            db_api.update_resource_traversal(self.context, self.id,
+                                             "UNPROCESSED")
 
             update_task = update.StackUpdate(self,
                                              rollback=action == self.ROLLBACK,
@@ -960,7 +959,7 @@ class Stack(collections.Mapping):
         notification.send(self)
 
     @profiler.trace('Stack.delete', hide_args=False)
-    def delete(self, action=DELETE, backup=False, abandon=False):
+    def delete_start(self, action=DELETE, backup=False, abandon=False):
         '''
         Delete all of the resources, and then the stack itself.
         The action parameter is used to differentiate between a user
@@ -984,25 +983,15 @@ class Stack(collections.Mapping):
                        action)
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.id,
-                                         traversed=False)
+                                         traversed="UNPROCESSED")
 
         snapshots = db_api.snapshot_get_all(self.context, self.id)
         for snapshot in snapshots:
             self.delete_snapshot(snapshot)
 
-        action_task = scheduler.DependencyTaskGroup(self.context,
-                                                    self.id,
-                                                    self.converge,
-                                                    reverse=True)
-        try:
-            scheduler.TaskRunner(action_task)(timeout=self.timeout_secs())
-        except exception.ResourceFailure as ex:
-            stack_status = self.FAILED
-            reason = 'Resource %s failed: %s' % (action, six.text_type(ex))
-        except scheduler.Timeout:
-            stack_status = self.FAILED
-            reason = '%s timed out' % action.title()
+        self.process_ready_resources(self.DELETE, reverse=True)
 
+    def delete_complete(self, stack_status, action, abandon=False):
         # If the stack delete succeeded, this is not a backup stack and it's
         # not a nested stack, we should delete the credentials
         if stack_status != self.FAILED and not self.owner_id:

@@ -967,7 +967,8 @@ class Resource(object):
         # store resource in DB on transition to CREATE_IN_PROGRESS
         # all other transitions (other than to DELETE_COMPLETE)
         # should be handled by the update_and_save above..
-        elif (action, status) in [(self.CREATE, self.IN_PROGRESS),
+        elif (action, status) in [(self.CREATE, self.INIT),
+                                  (self.CREATE, self.IN_PROGRESS),
                                   (self.ADOPT, self.IN_PROGRESS),
                                   (self.DELETE, self.INIT)]:
             self._store()
@@ -1007,7 +1008,7 @@ class Resource(object):
         if new_state != old_state:
             self._add_event(action, status, reason)
 
-        self.stack.reset_resource_attributes()
+            self.stack.reset_resource_attributes()
 
     @property
     def state(self):
