@@ -354,8 +354,8 @@ def resource_exists_in_graph(context, stack_id, resource_name):
     return IMPL.resource_exists_in_graph(context, stack_id, resource_name)
 
 
-def get_ready_resources(context, stack_id, reverse=False, exclude=[]):
-        return IMPL.get_ready_resources(context, stack_id, reverse, exclude)
+def get_ready_nodes(context, stack_id, reverse=False, exclude=[]):
+        return IMPL.get_ready_nodes(context, stack_id, reverse, exclude)
 
 
 def update_resource_traversal(context, stack_id, status, resource_name=None):

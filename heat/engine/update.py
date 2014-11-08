@@ -66,7 +66,7 @@ class StackUpdate(object):
 
         # delete the old versions and delete resources from stack.
         db_api.update_resource_traversal(self.context, self.stack_id,
-                                         traversed=False)
+                                         status="UNPROCESSED")
         LOG.debug("==== Running GC...")
         yield self.gc()
 
@@ -117,8 +117,8 @@ class StackUpdate(object):
                                       old_resource.status,
                                       old_resource.status_reason)
             db_api.update_resource_traversal(
-                self.context, self.stack_id, traversed=True,
-                res_name=old_resource.name)
+                self.context, self.stack_id, status="PROCESSED",
+                resource_name=old_resource.name)
 
 
     def _reclaim_resource_if_needed(self, res_name):
@@ -190,7 +190,8 @@ class StackUpdate(object):
                               "version: %s", db_res.name, db_res.version)
                     db_api.resource_delete(self.context, db_res.id)
         db_api.update_resource_traversal(
-            self.context, self.stack_id, traversed=True, res_name=res.name)
+            self.context, self.stack_id, status="PROCESSED",
+            resource_name=res.name)
 
     @scheduler.wrappertask
     def _create_resource(self, new_res):
@@ -217,7 +218,8 @@ class StackUpdate(object):
             else:
                 LOG.info("==== Resource %s doesn't need update: ", res_name)
                 db_api.update_resource_traversal(
-                    self.context, self.stack_id, traversed=True, res_name=res_name)
+                    self.context, self.stack_id, status="PROCESSED",
+                    resource_name=res_name)
                 return
         except resource.UpdateReplace:
             pass

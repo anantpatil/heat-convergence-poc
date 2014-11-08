@@ -428,14 +428,15 @@ class DependencyTaskGroup(object):
                                      self._runners[dependent_node])
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.stack_id,
-                                         traversed=True, res_name=key)
+                                         status="PROCESSED",
+                                         resource_name=key)
 
     def _ready(self):
         """
         Iterate over all subtasks that are ready to start - i.e. all their
         dependencies have been satisfied but they have not yet been started.
         """
-        ready_resources = self._get_ready_resources_from_db(self.reverse)
+        ready_resources = self._get_ready_nodes_from_db(self.reverse)
         LOG.debug('Ready_Resources %s' % ready_resources)
         d = dict()
         for rsrc_name in ready_resources:
@@ -444,17 +445,17 @@ class DependencyTaskGroup(object):
                 d[rsrc_name] = TaskRunner(self.task, rsrc_name)
         return d
 
-    def _get_ready_resources_from_db(self, reverse=False):
-        return db_api.get_ready_resources(self.context,
-                                          stack_id=self.stack_id,
-                                          reverse=reverse)
+    def _get_ready_nodes_from_db(self, reverse=False):
+        return db_api.get_ready_nodes(self.context,
+                                      stack_id=self.stack_id,
+                                      reverse=reverse)
 
     def _running(self):
         """
         Iterate over all subtasks that are currently running - i.e. they have
         been started but have not yet completed.
         """
-        running = lambda (k, r): k in self._get_ready_resources_from_db(
+        running = lambda (k, r): k in self._get_ready_nodes_from_db(
             self.reverse) and r.started()
         return itertools.ifilter(running, six.iteritems(self._runners))
 

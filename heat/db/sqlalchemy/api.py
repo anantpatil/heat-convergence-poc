@@ -981,53 +981,32 @@ def resource_exists_in_graph(context, stack_id, resource_name):
     return True if result else False
 
 
-'''
-def get_ready_resources(context, stack_id, reverse):
-    if reverse:
-        results = [x for (x, ) in model_query(
-            context, models.ResourceGraph.resource_name).\
-            filter_by(traversed=False, stack_id=stack_id).\
-            filter(models.ResourceGraph.needed_by.in_(
-                model_query(context, models.ResourceGraph.needed_by).filter_by(
-                    traversed=True, stack_id=stack_id).subquery()
-            )).distinct().all()]
-    else:
-        results = [x for (x, ) in model_query(
-            context, models.ResourceGraph.resource_name).
-            filter_by(traversed=False, stack_id=stack_id).\
-            filter(~models.ResourceGraph.resource_name.in_(
-                model_query(context, models.ResourceGraph.needed_by).filter_by(
-                    traversed=False, stack_id=stack_id).subquery()
-            )).distinct().all()]
-    return results
-'''
-
-
-def get_ready_resources(context, stack_id, reverse, exclude=[]):
+def get_ready_nodes(context, stack_id, reverse, exclude=[]):
     rg = models.ResourceGraph
     if reverse:
-        results = [x for (x, ) in model_query(
-            context, models.ResourceGraph.resource_name).\
-            filter_by(status=models.ResourceGraph.UNPROCESSED, stack_id=stack_id, needed_by="").\
-            distinct().all()]
-        if results:
-            return results
-
-        results = [x for (x, ) in model_query(
-            context, models.ResourceGraph.resource_name).\
-            filter_by(status=models.ResourceGraph.UNPROCESSED, stack_id=stack_id).\
-            filter(models.ResourceGraph.needed_by.in_(
-                model_query(context, models.ResourceGraph.resource_name)\
-                .filter_by(status=models.ResourceGraph.PROCESSED, stack_id=stack_id).subquery()
-            )).distinct().all()]
+        query = model_query(context, rg.resource_name, rg.status).\
+                filter(rg.status != rg.PROCESSED).\
+                filter_by(stack_id=stack_id, needed_by="")
+        result = query.distinct().all()
+        if not result:
+            query = model_query(context, rg.resource_name, rg.status).\
+                    filter(rg.status != rg.PROCESSED).\
+                    filter(rg.stack_id == stack_id).\
+                    filter(rg.needed_by.in_(
+                        model_query(context, rg.resource_name).\
+                        filter(rg.resource_name != rg.PROCESSED).\
+                        filter(rg.stack_id == stack_id).subquery()))
+            result = query.distinct().all()
+        return result
     else:
         query = model_query(context, rg.resource_name, rg.status).\
                 filter(rg.status != rg.PROCESSED).\
-                filter(rg.stack_id==stack_id).\
+                filter(rg.stack_id == stack_id).\
                 filter(~rg.resource_name.in_(exclude)).\
-                filter(~rg.resource_name.in_(model_query(context, rg.needed_by).\
-                                             filter(rg.status != rg.PROCESSED).\
-                                             filter(rg.stack_id == stack_id).subquery()))
+                filter(~rg.resource_name.in_(
+                    model_query(context, rg.needed_by).\
+                    filter(rg.status != rg.PROCESSED).\
+                    filter(rg.stack_id == stack_id).subquery()))
         return query.distinct().all()
 
 def update_resource_traversal(context, stack_id, status, resource_name=None):

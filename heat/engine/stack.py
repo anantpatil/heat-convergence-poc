@@ -277,10 +277,11 @@ class Stack(collections.Mapping):
         change_list = []
         while True:
             resource_names = [name for name, status in change_list]
-            nodes = db_api.get_ready_resources(context=self.context,
-                                               stack_id=self.id,
-                                               reverse=reverse,
-                                               exclude=resource_names)
+            nodes = db_api.get_ready_nodes(context=self.context,
+                                           stack_id=self.id,
+                                           reverse=reverse,
+                                           exclude=resource_names)
+            LOG.info("=============Rake: ready nodes: %s, action: %s", nodes, stack_action)
             if stack_action != self.UPDATE:
                 return nodes
             elif not nodes:
@@ -300,6 +301,10 @@ class Stack(collections.Mapping):
             action = stack_action.lower()
             complete_action = getattr(self, '%s_complete' % action, None)
             if callable(complete_action):
+                """args = []
+                if stack_action in (self.ROLLBACK, self.DELETE):
+                    args = [stack_action]
+                complete_action(*args)"""
                 complete_action()
             return
 
@@ -718,7 +723,7 @@ class Stack(collections.Mapping):
         if self.action != self.CREATE:
             db_api.update_resource_traversal(context=self.context,
                                              stack_id=self.id,
-                                             traversed="UNPROCESSED")
+                                             status="UNPROCESSED")
 
         stack_status = self.COMPLETE
         reason = 'Stack %s completed successfully' % action
@@ -884,7 +889,7 @@ class Stack(collections.Mapping):
 
             # mark the graph as not traversed
             db_api.update_resource_traversal(self.context, self.id,
-                                             "UNPROCESSED")
+                                             status="UNPROCESSED")
 
             update_task = update.StackUpdate(self,
                                              rollback=action == self.ROLLBACK,
@@ -977,13 +982,11 @@ class Stack(collections.Mapping):
                            "Invalid action %s" % action)
             return
 
-        stack_status = self.COMPLETE
-        reason = 'Stack %s completed successfully' % action
         self.state_set(action, self.IN_PROGRESS, 'Stack %s started' %
                        action)
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.id,
-                                         traversed="UNPROCESSED")
+                                         status="UNPROCESSED")
 
         snapshots = db_api.snapshot_get_all(self.context, self.id)
         for snapshot in snapshots:
@@ -991,10 +994,11 @@ class Stack(collections.Mapping):
 
         self.process_ready_resources(self.DELETE, reverse=True)
 
-    def delete_complete(self, stack_status, action, abandon=False):
-        # If the stack delete succeeded, this is not a backup stack and it's
+    def delete_complete(self, abandon=False):
+        #(TODO) : Handle failure
+        # If the stack delete succeeded, and it's
         # not a nested stack, we should delete the credentials
-        if stack_status != self.FAILED and not self.owner_id:
+        if self.status != self.FAILED and not self.owner_id:
             # Cleanup stored user_creds so they aren't accessible via
             # the soft-deleted stack which remains in the DB
             if self.user_creds_id:
@@ -1053,15 +1057,13 @@ class Stack(collections.Mapping):
                     reason = "Error deleting project: %s" % six.text_type(ex)
 
         try:
-            self.state_set(action, stack_status, reason)
+            reason = 'Stack %s completed successfully' % self.action
+            self.state_set(self.action, self.COMPLETE, reason)
         except exception.NotFound:
             LOG.info(_LI("Tried to delete stack that does not exist "
                          "%s "), self.id)
 
-        lifecycle_plugin_utils.do_post_ops(self.context, self,
-                                           None, action,
-                                           (self.status == self.FAILED))
-        if stack_status != self.FAILED:
+        if self.status != self.FAILED:
             # delete the stack resource graph
             LOG.debug("==== Deleting resource graph for %s", self.name)
             try:

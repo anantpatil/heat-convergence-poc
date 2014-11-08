@@ -912,7 +912,7 @@ class EngineService(service.Service):
             if acquire_result is None:
                 self.thread_group_mgr.stop_timers(stack.id)
                 self.thread_group_mgr.start_with_acquired_lock(stack, lock,
-                                                               stack.delete)
+                                                               stack.delete_start)
                 return
 
         # Current engine has the lock
@@ -941,7 +941,7 @@ class EngineService(service.Service):
         stack = parser.Stack.load(cnxt, stack=st)
 
         self.thread_group_mgr.start_with_lock(cnxt, stack, self.engine_id,
-                                              stack.delete)
+                                              stack.delete_start)
         return None
 
     @request_context

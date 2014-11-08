@@ -478,8 +478,8 @@ class Resource(object):
                 # once the resource is successfully created set traversed=True
             db_api.update_resource_traversal(context=self.context,
                                              stack_id=self.stack.id,
-                                             traversed=True,
-                                             res_name=self.name)
+                                             status="PROCESSED",
+                                             resource_name=self.name)
 
     def action_handler_task(self, action, args=[], action_prefix=None):
         '''
