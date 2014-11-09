@@ -21,6 +21,7 @@ from oslo.db.sqlalchemy import session as db_session
 from oslo.db.sqlalchemy import utils
 import osprofiler.sqlalchemy
 import sqlalchemy
+from sqlalchemy import or_
 from sqlalchemy import orm
 from sqlalchemy.orm.session import Session
 
@@ -984,32 +985,28 @@ def resource_exists_in_graph(context, stack_id, resource_name):
 def get_ready_nodes(context, stack_id, reverse, exclude=[]):
     rg = models.ResourceGraph
     if reverse:
-        query = model_query(context, rg.resource_name, rg.status).\
-                filter(rg.status != rg.PROCESSED).\
-                filter_by(stack_id=stack_id, needed_by="")
-        result = query.distinct().all()
-        if not result:
-            query = model_query(context, rg.resource_name, rg.status).\
-                    filter(rg.status != rg.PROCESSED).\
-                    filter(rg.stack_id == stack_id).\
-                    filter(rg.needed_by.in_(
-                        model_query(context, rg.resource_name).\
-                        filter(rg.resource_name != rg.PROCESSED).\
-                        filter(rg.stack_id == stack_id).subquery()))
-            result = query.distinct().all()
-        return result
+        query = model_query(context, rg.resource_name).\
+                filter(rg.traversed == False).\
+                filter(rg.stack_id == stack_id).\
+                filter(or_(rg.needed_by == '',
+                           rg.needed_by.in_(
+                            model_query(context, rg.resource_name).\
+                            filter(rg.traversed == True).\
+                            filter(rg.stack_id == stack_id).subquery())))
+        return [r for (r, ) in query.distinct().all()]
     else:
-        query = model_query(context, rg.resource_name, rg.status).\
-                filter(rg.status != rg.PROCESSED).\
+        query = model_query(context, rg.resource_name).\
+                filter(rg.traversed == False).\
                 filter(rg.stack_id == stack_id).\
                 filter(~rg.resource_name.in_(exclude)).\
                 filter(~rg.resource_name.in_(
                     model_query(context, rg.needed_by).\
-                    filter(rg.status != rg.PROCESSED).\
+                    filter(rg.traversed == False).\
                     filter(rg.stack_id == stack_id).subquery()))
-        return query.distinct().all()
 
-def update_resource_traversal(context, stack_id, status, resource_name=None):
+        return [r for (r, ) in query.distinct().all()]
+
+def update_resource_traversal(context, stack_id, traversed, resource_name=None):
     filters = {'stack_id': stack_id}
     if resource_name:
         filters['resource_name'] = resource_name
@@ -1017,12 +1014,11 @@ def update_resource_traversal(context, stack_id, status, resource_name=None):
     with session.begin():
         session.query(models.ResourceGraph).\
             filter_by(**filters).\
-            update({"status": status})
+            update({"traversed": traversed})
     session.flush()
 
 
 def resource_graph_delete_all_edges(context, stack_id, resource_name):
-    from sqlalchemy import or_
     session = _session(context)
     with session.begin():
         session.query(models.ResourceGraph).\

@@ -626,14 +626,17 @@ class EngineService(service.Service):
         stack = parser.Stack.load(cnxt, stack_id)
         db_api.update_resource_traversal(context=cnxt,
                                          stack_id=stack_id,
-                                         status="PROCESSED",
+                                         traversed=True,
                                          resource_name=resource_name)
         dbres = db_api.resource_get_by_name_and_stack(cnxt, resource_name,
                                                     stack_id)
         from heat.engine import resource
         res = resource.Resource.load(dbres, stack)
         res.state_set(res.CREATE, res.COMPLETE)
-        stack.process_ready_resources(stack.action)
+
+        # only Delete/update/create for POC
+        reverse = True if stack.action == stack.DELETE else False
+        stack.process_ready_resources(stack.action, reverse)
 
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
@@ -750,7 +753,7 @@ class EngineService(service.Service):
         event = eventlet.event.Event()
         th = self.thread_group_mgr.start_with_lock(cnxt, current_stack,
                                                    self.engine_id,
-                                                   current_stack.update,
+                                                   current_stack.update_start,
                                                    updated_stack,
                                                    event=event)
         th.link(self.thread_group_mgr.remove_event, current_stack.id, event)
