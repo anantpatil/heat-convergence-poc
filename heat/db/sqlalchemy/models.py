@@ -248,8 +248,6 @@ class Resource(BASE, HeatBase, StateAware):
     data = relationship(ResourceData,
                         cascade="all,delete",
                         backref=backref('resource'))
-    action = sqlalchemy.Column('action', sqlalchemy.String(255), nullable=True)
-    status = sqlalchemy.Column('status', sqlalchemy.String(255), nullable=True)
 
     # Override timestamp column to store the correct value: it should be the
     # time the create/update call was issued, not the time the DB entry is
@@ -357,6 +355,8 @@ class Snapshot(BASE, HeatBase):
 
 class ResourceGraph(BASE, HeatBase):
     """ Represents a graph of stack resources. """
+    statuses = (PROCESSED, UNPROCESSED, PROCESSING
+                ) = ('PROCESSED', 'UNPROCESSED', 'PROCESSING')
     __tablename__ = 'resource_graph'
 
     resource_name = sqlalchemy.Column('resource_name', sqlalchemy.String(255),
@@ -366,4 +366,5 @@ class ResourceGraph(BASE, HeatBase):
     stack_id = sqlalchemy.Column('stack_id', sqlalchemy.String(36),
                                  sqlalchemy.ForeignKey('stack.id'),
                                  primary_key=True,nullable=False)
-    traversed = sqlalchemy.Column('traversed', sqlalchemy.Boolean, default=0)
+    status = sqlalchemy.Column('status', sqlalchemy.String(36),
+                               default=UNPROCESSED)

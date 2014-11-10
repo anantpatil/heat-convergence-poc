@@ -643,7 +643,6 @@ class EngineService(service.Service):
         stack = parser.Stack.load(cnxt, stack_id)
         stack.process_ready_nodes()
 
-
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
                      owner_id=None):
@@ -759,7 +758,7 @@ class EngineService(service.Service):
         event = eventlet.event.Event()
         th = self.thread_group_mgr.start_with_lock(cnxt, current_stack,
                                                    self.engine_id,
-                                                   current_stack.update_start,
+                                                   current_stack.update,
                                                    updated_stack,
                                                    event=event)
         th.link(self.thread_group_mgr.remove_event, current_stack.id, event)

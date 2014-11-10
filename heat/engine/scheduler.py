@@ -428,7 +428,7 @@ class DependencyTaskGroup(object):
                                      self._runners[dependent_node])
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.stack_id,
-                                         traversed=True,
+                                         status="PROCESSED",
                                          resource_name=key)
 
     def _ready(self):

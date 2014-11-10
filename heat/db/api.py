@@ -358,8 +358,8 @@ def get_ready_nodes(context, stack_id, reverse=False, exclude=[]):
         return IMPL.get_ready_nodes(context, stack_id, reverse, exclude)
 
 
-def update_resource_traversal(context, stack_id, traversed, resource_name=None):
-    return IMPL.update_resource_traversal(context, stack_id, traversed,
+def update_resource_traversal(context, stack_id, status, resource_name=None):
+    return IMPL.update_resource_traversal(context, stack_id, status,
                                           resource_name)
 
 

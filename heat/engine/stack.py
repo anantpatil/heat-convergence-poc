@@ -270,47 +270,30 @@ class Stack(collections.Mapping):
                                  'stack_id': self.id }
                         db_api.graph_insert_egde(self.context, value)
 
-    def _get_resource_action(self, rsrc_name):
-        new_res = self.resources[rsrc_name]
-        if rsrc_name not in self.resources:
-            #resource not in current template, so pass delete action
-            return self.DELETE
-        old_res = db_api.resource_get_by_name_and_stack(context=self.context,
-                                                        resource_name=rsrc_name,
-                                                        stack_id=self.id)
-        if old_res:
-            old_rsrc_defn = rsrc_defn.ResourceDefinition.from_dict(
-                                json.loads(old_res.rsrc_defn))
-            if new_res.needs_update(old_rsrc_defn):
-                return self.UPDATE
-            else:
-                return  # No action required
-        else:
-            return self.CREATE
-
+    def _is_resource_updated(self, rsrc_name):
+        return False
 
     def _eval_ready_leaves(self, stack_action, reverse):
         change_list = []
         while True:
-            resource_names = [name for name in change_list]
+            resource_names = [name for name, status in change_list]
             nodes = db_api.get_ready_nodes(context=self.context,
                                            stack_id=self.id,
                                            reverse=reverse,
                                            exclude=resource_names)
             LOG.info("=============Rake: ready nodes: %s, action: %s", nodes, stack_action)
             if stack_action != self.UPDATE:
-                return [(node, stack_action) for node in nodes]
+                return nodes
             elif not nodes:
                 return change_list
-            for rsrc_name in nodes:
-                action = self._get_resource_action(rsrc_name)
-                if action:
-                    change_list.append((rsrc_name, action))
+            for name, status in nodes:
+                if self._is_resource_updated(name):
+                    change_list.append((name, status))
                 else:
                     db_api.update_resource_traversal(context=self.context,
                                                      stack_id=self.id,
-                                                     traversed=True,
-                                                     resource_name=rsrc_name)
+                                                     status='PROCESSED',
+                                                     resource_name=name)
 
     def process_ready_resources(self, stack_action, reverse=False):
         nodes = self._eval_ready_leaves(stack_action, reverse)
@@ -325,42 +308,16 @@ class Stack(collections.Mapping):
                 complete_action()
             return
 
-        def converge_resource(rsrc_name, action):
-            """db_api.update_resource_traversal(context=self.context,
+        def converge_resource(rsrc_name):
+            db_api.update_resource_traversal(context=self.context,
                                              stack_id=self.id,
                                              status='PROCESSING',
-                                             resource_name=rsrc_name)"""
-            if not self.is_resource_convg_triggered(rsrc_name, action):
-                LOG.debug("=====creating resource entry and converging %s",
-                          rsrc_name)
-                self.trigger_init_action(rsrc_name, action)
-                self.rpc_client.converge_resource(self.context,
-                                                  self.id,
-                                                  rsrc_name)
-        [converge_resource(rsrc_name, action) for rsrc_name, action in nodes]
-
-    def is_resource_convg_triggered(self, rsrc_name, action):
-        dbres = db_api.resource_get_by_name_and_stack(self.context, rsrc_name,
-                                                      self.id)
-        if dbres and dbres.action == action and dbres.status in (
-                                            'INIT', 'IN_PROGRESS'):
-            return True
-        else:
-            return False
-
-    def trigger_init_action(self, rsrc_name, action):
-        # set status to INIT initially for CREATE, DELETE etc..
-        # worker will continue with the next states.
-        rsrc = self.resources[rsrc_name]
-        if self.action == self.UPDATE:
-            # for rollback purpose, create resource versioning
-            rsrc.id = None
-            rsrc.action = action
-            rsrc.status = rsrc.INIT
-            rsrc.resource_id = rsrc.resource_id
-            rsrc.store()
-        else:
-            rsrc.state_set(action, rsrc.INIT)
+                                             resource_name=rsrc_name)
+            self.rpc_client.converge_resource(self.context,
+                                              self.id,
+                                              rsrc_name)
+        [converge_resource(rsrc_name) for rsrc_name, status in nodes
+                                          if status == 'UNPROCESSED']
 
     def reset_dependencies(self):
         self._dependencies = None
@@ -727,6 +684,8 @@ class Stack(collections.Mapping):
         creator(timeout=self.timeout_secs())
 
     def create_start(self):
+        for res in self._resources.values():
+            res.state_set(res.CREATE, res.INIT)
         self.process_ready_resources(self.CREATE)
 
     def create_complete(self):
@@ -764,7 +723,7 @@ class Stack(collections.Mapping):
         if self.action != self.CREATE:
             db_api.update_resource_traversal(context=self.context,
                                              stack_id=self.id,
-                                             traversed=False)
+                                             status="UNPROCESSED")
 
         stack_status = self.COMPLETE
         reason = 'Stack %s completed successfully' % action
@@ -949,7 +908,7 @@ class Stack(collections.Mapping):
 
             # mark the graph as not traversed
             db_api.update_resource_traversal(self.context, self.id,
-                                             traversed=False)
+                                             status="UNPROCESSED")
 
             update_task = update.StackUpdate(self,
                                              rollback=action == self.ROLLBACK,
@@ -1023,110 +982,6 @@ class Stack(collections.Mapping):
 
         notification.send(self)
 
-    def update_start(self, newstack=None, action=UPDATE, event=None):
-        # stack will refer to the new template.
-        # New template should point to old template using predecessor column.
-        newstack.id = self.id
-        newstack.t.predecessor = self.t.id
-        newstack.action = self.action
-        newstack.status = self.status
-        newstack.status_reason = self.status_reason
-        newstack.store()
-
-        self.updated_time = datetime.utcnow()
-        if action not in (self.UPDATE, self.ROLLBACK, self.RESTORE):
-            LOG.error(_LE("Unexpected action %s passed to update!"), action)
-            self.state_set(self.UPDATE, self.FAILED,
-                           "Invalid action %s" % action)
-            return
-
-        try:
-            lifecycle_plugin_utils.do_pre_ops(self.context, self,
-                                              action=action)
-        except Exception as e:
-            self.state_set(action, self.FAILED, e.args[0] if e.args else
-                           'Failed stack pre-ops: %s' % six.text_type(e))
-            return
-        if self.status == self.IN_PROGRESS:
-            if action == self.ROLLBACK:
-                LOG.debug("Starting update rollback for %s" % self.name)
-            else:
-                self.state_set(action, self.FAILED,
-                               'State invalid for %s' % action)
-                return
-
-        self.state_set(action, self.IN_PROGRESS,
-                       'Stack %s started' % action)
-
-        try:
-            # 3. traverse the graph and update
-            # 4. deletion phase for resources
-            # 5. Clean up old raw_template
-            # self.timeout_mins = oldstack.timeout_mins
-            self._set_param_stackid()
-
-            # mark the graph as not traversed
-            db_api.update_resource_traversal(self.context, self.id,
-                                             traversed=False)
-            # only update for POC
-            self.process_ready_resources(action)
-            # call _update_resource()
-            # reset traversed flag
-            # call _reclaim_resource_if_needed()
-        except scheduler.Timeout:
-            stack_status = self.FAILED
-            reason = 'Timed out'
-        except ForcedCancel as e:
-            reason = six.text_type(e)
-
-            stack_status = self.FAILED
-            if action == self.UPDATE:
-                #update_task.updater.cancel_all()
-                #yield self.update_task(oldstack, action=self.ROLLBACK)
-                return
-
-        except exception.ResourceFailure as e:
-            reason = six.text_type(e)
-
-            stack_status = self.FAILED
-            if action == self.UPDATE:
-                # If rollback is enabled, we do another update, with the
-                # existing template, so we roll back to the original state
-                if not self.disable_rollback:
-                    # yield oldstack.update_task(None, action=self.ROLLBACK)
-                    return
-
-    def update_complete(self):
-        # flip the template to the newstack values
-        #self.t = newstack.t
-
-        # TODO: delete older version since update was sucessfully no rollback required
-        # self._delete_older_resource_versions()
-        template_outputs = self.t[self.t.OUTPUTS]
-        self.outputs = self.resolve_static_data(template_outputs)
-        self.t.predecessor = None
-        self.t.store()
-
-        LOG.debug('Deleting old template')
-        old_template_id = self.t.predecessor
-        db_api.raw_template_delete(self.context, old_template_id)
-
-        # Don't use state_set to do only one update query and avoid race
-        # condition with the COMPLETE status
-        reason = 'Stack successfully updated'
-        stack_status = self.COMPLETE
-        self.action = self.UPDATE
-        self.status = stack_status
-        self.status_reason = reason
-
-        self.store()
-        lifecycle_plugin_utils.do_post_ops(self.context,
-                                           self, self.UPDATE,
-                                           is_stack_failure=(
-                                               self.status == self.FAILED))
-
-        notification.send(self)
-
     @profiler.trace('Stack.delete', hide_args=False)
     def delete_start(self, action=DELETE, backup=False, abandon=False):
         '''
@@ -1150,7 +1005,7 @@ class Stack(collections.Mapping):
                        action)
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.id,
-                                         traversed=False)
+                                         status="UNPROCESSED")
 
         snapshots = db_api.snapshot_get_all(self.context, self.id)
         for snapshot in snapshots:
