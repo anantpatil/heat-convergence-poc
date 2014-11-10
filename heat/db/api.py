@@ -330,7 +330,7 @@ def graph_insert_egde(contex, values):
     return IMPL.graph_insert_egde(contex, values)
 
 
-def  graph_delete_egde(contex, values):
+def graph_delete_egde(contex, values):
     return IMPL.graph_delete_egde(contex, values)
 
 
@@ -354,8 +354,8 @@ def resource_exists_in_graph(context, stack_id, resource_name):
     return IMPL.resource_exists_in_graph(context, stack_id, resource_name)
 
 
-def get_ready_nodes(context, stack_id, reverse=False, exclude=[]):
-        return IMPL.get_ready_nodes(context, stack_id, reverse, exclude)
+def get_ready_nodes(context, stack_id, reverse=False):
+        return IMPL.get_ready_nodes(context, stack_id, reverse)
 
 
 def update_resource_traversal(context, stack_id, status, resource_name=None):
@@ -380,3 +380,7 @@ def resource_delete(context, resource_id):
 
 def get_untraversed_edges(context, stack_id):
     return IMPL.get_untraversed_edges(context, stack_id)
+
+
+def get_all_resources_from_graph(context, stack_id):
+    return IMPL.get_all_resources_from_graph(context, stack_id)

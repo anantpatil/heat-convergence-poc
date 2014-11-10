@@ -270,35 +270,12 @@ class Stack(collections.Mapping):
                                  'stack_id': self.id }
                         db_api.graph_insert_egde(self.context, value)
 
-    def _is_resource_updated(self, rsrc_name):
-        return False
-
-    def _eval_ready_leaves(self, stack_action, reverse):
-        change_list = []
-        while True:
-            resource_names = [name for name, status in change_list]
-            nodes = db_api.get_ready_nodes(context=self.context,
-                                           stack_id=self.id,
-                                           reverse=reverse,
-                                           exclude=resource_names)
-            LOG.info("=============Rake: ready nodes: %s, action: %s", nodes, stack_action)
-            if stack_action != self.UPDATE:
-                return nodes
-            elif not nodes:
-                return change_list
-            for name, status in nodes:
-                if self._is_resource_updated(name):
-                    change_list.append((name, status))
-                else:
-                    db_api.update_resource_traversal(context=self.context,
-                                                     stack_id=self.id,
-                                                     status='PROCESSED',
-                                                     resource_name=name)
-
-    def process_ready_resources(self, stack_action, reverse=False):
-        nodes = self._eval_ready_leaves(stack_action, reverse)
+    def process_ready_resources(self, reverse=False):
+        nodes = db_api.get_ready_nodes(context=self.context,
+                                       stack_id=self.id,
+                                       reverse=reverse)
         if not nodes:
-            action = stack_action.lower()
+            action = self.action.lower()
             complete_action = getattr(self, '%s_complete' % action, None)
             if callable(complete_action):
                 """args = []
@@ -684,9 +661,9 @@ class Stack(collections.Mapping):
         creator(timeout=self.timeout_secs())
 
     def create_start(self):
-        for res in self._resources.values():
+        for res in self.resources.values():
             res.state_set(res.CREATE, res.INIT)
-        self.process_ready_resources(self.CREATE)
+        self.process_ready_resources()
 
     def create_complete(self):
         #(TODO) : Handle failure
@@ -859,17 +836,52 @@ class Stack(collections.Mapping):
         Update will fail if it exceeds the specified timeout. The default is
         60 minutes, set in the constructor
         '''
+        self.state_set(self.UPDATE, self.IN_PROGRESS, "Update in Progress")
         newstack.id = self.id
         newstack.t.predecessor = self.t.id
         newstack.action = self.action
         newstack.status = self.status
         newstack.status_reason = self.status_reason
         newstack.store()
+        
+        # Mark all nodes as UNPROCESSED
+        db_api.update_resource_traversal(self.context, self.id,
+                                         status="UNPROCESSED")
+        
+        def create_new_resource_version(new_res, old_res, action):
+            new_res.id = None
+            new_res.action = action
+            new_res.status = new_res.INIT
+            new_res.resource_id = old_res.nova_instance
+            new_res.version = old_res.version + 1
+            new_res.store()
 
-        self.updated_time = datetime.utcnow()
-        updater = scheduler.TaskRunner(newstack.update_task, self,
-                                       event=event)
-        updater()
+        for res_name in db_api.get_all_resources_from_graph(self.context, self.id):
+            old_res = db_api.resource_get_by_name_and_stack(context=self.context,
+                                                            resource_name=res_name,
+                                                            stack_id=self.id)
+
+            try:
+                new_res = newstack.resources[res_name]
+            except KeyError:
+                #Resource does not exists in new template therefore it is deleted
+                #create_new_resource_version( old_res, res.DELETE)
+                res_obj = resource.Resource.load(old_res, self)
+                create_new_resource_version(res_obj, old_res, res_obj.DELETE)
+            else:
+                if old_res:
+                    old_rsrc_defn = rsrc_defn.ResourceDefinition.from_dict(
+                                        json.loads(old_res.rsrc_defn),
+                                        old_res.rsrc_defn_hash)
+                    if new_res.needs_update(old_rsrc_defn):
+                        create_new_resource_version(new_res, old_res, new_res.UPDATE)
+                    else:
+                        db_api.update_resource_traversal(self.context, self.id,
+                                                         status="PROCESSED",
+                                                         resource_name=new_res.name)
+                else:
+                    new_res.state_set(new_res.CREATE, new_res.INIT)
+        newstack.process_ready_resources()
 
     @scheduler.wrappertask
     def update_task(self, oldstack, action=UPDATE, event=None):
@@ -1011,7 +1023,7 @@ class Stack(collections.Mapping):
         for snapshot in snapshots:
             self.delete_snapshot(snapshot)
 
-        self.process_ready_resources(self.DELETE, reverse=True)
+        self.process_ready_resources(reverse=True)
 
     def delete_complete(self, abandon=False):
         #(TODO) : Handle failure
