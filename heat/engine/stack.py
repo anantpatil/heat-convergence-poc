@@ -792,8 +792,8 @@ class Stack(collections.Mapping):
             post_func()
         lifecycle_plugin_utils.do_post_ops(self.context, self, None, action,
                                            (self.status == self.FAILED))
-    @scheduler.wrappertask
-    def resource_action(self, r):
+        @scheduler.wrappertask
+        def resource_action(self, r):
             # Find e.g resource.create and call it
             action_l = self.action.lower()
             handle = getattr(r, '%s' % action_l)
@@ -803,6 +803,25 @@ class Stack(collections.Mapping):
             handle_kwargs = getattr(self,
                                     '_%s_kwargs' % action_l, lambda x: {})
             yield handle(**handle_kwargs(r))
+
+    def resource_action_runner(self, resource_name):
+        @scheduler.wrappertask
+        def resource_action(self, r):
+            # Find e.g resource.create and call it
+            action_l = self.action.lower()
+            handle = getattr(r, '%s' % action_l)
+
+            # If a local _$action_kwargs function exists, call it to get the
+            # action specific argument list, otherwise an empty arg list
+            handle_kwargs = getattr(self,
+                                    '_%s_kwargs' % action_l, lambda x: {})
+            yield handle(**handle_kwargs(r))
+
+        rsrc = self[resource_name]
+        action_task = scheduler.TaskRunner(
+                            resource_action,
+                            rsrc)
+        action_task()
 
     @scheduler.wrappertask
     def resource_delete(self, rsrc_name):

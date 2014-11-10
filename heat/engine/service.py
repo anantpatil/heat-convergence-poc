@@ -622,21 +622,27 @@ class EngineService(service.Service):
 
     @request_context
     def converge_resource(self, cnxt, stack_id, resource_name):
-        #TODO(ishant) : Remove this method as this is only test code.
         stack = parser.Stack.load(cnxt, stack_id)
-        db_api.update_resource_traversal(context=cnxt,
-                                         stack_id=stack_id,
-                                         traversed=True,
-                                         resource_name=resource_name)
-        dbres = db_api.resource_get_by_name_and_stack(cnxt, resource_name,
-                                                    stack_id)
-        from heat.engine import resource
-        res = resource.Resource.load(dbres, stack)
-        res.state_set(res.CREATE, res.COMPLETE)
+        # TODO remove check_create_complete from resource_action
+        stack.resource_action_runner(resource_name)
+        # notify Engine to converge
+        # TODO notify observer to check_create_complete once observer 
+        # code is ready.
+        self.rpc_api.notify_resource_observed(cnxt, stack_id, resource_name)
+        
 
-        # only Delete/update/create for POC
-        reverse = True if stack.action == stack.DELETE else False
-        stack.process_ready_resources(stack.action, reverse)
+    @request_context
+    def notify_resource_observed(self, cnxt, stack_id, resource_name):
+        # if status == success, mark ResourceGraph status = PROCESSED
+        #     and inatiate process_ready_nodes
+        # else status != success, initiate rollback if enabled
+        rsrc = db_api.get_resource_by_name_and_stack(cnxt, resource_name, stack_id)
+        # TODO Compare desired/observed state (RandomString)
+        if rsrc.status == 'COMPLETE':
+            db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', resource_name)
+        stack = parser.Stack.load(cnxt, stack_id)
+        stack.process_ready_nodes()
+
 
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
