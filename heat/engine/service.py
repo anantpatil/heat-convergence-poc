@@ -620,21 +620,26 @@ class EngineService(service.Service):
 
         return api.format_stack_preview(stack)
 
+
     @request_context
-    def converge_resource(self, cnxt, stack_id, name, version, attempts=0):
+    def converge_resource(self, cnxt, stack_id, name, version):
         stack = parser.Stack.load(cnxt, stack_id)
         # TODO remove check_create_complete from resource_action
         stack.resource_action_runner(name, version)
         # notify Engine to converge
         # TODO notify observer to check_create_complete once observer 
         # code is ready.
-        self.rpc_api.notify_resource_observed(cnxt, stack_id, name, version, attempts)
+        self.rpc_api.notify_resource_observed(cnxt, stack_id, name, version)
 
 
     @request_context
-    def notify_resource_observed(self, cnxt, stack_id, name, version, attempts):
+    def notify_resource_observed(self, cnxt, stack_id, name, version):
+        def filter_nodes(nodes, status):
+            return filter(lambda (res_name, res_status): res_status == status, nodes)
+
         def handle_failure():
-            processing_nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
+            nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
+            processing_nodes = filter_nodes(nodes, 'PROCESSING')
             if not processing_nodes:
                 if not stack.disable_rollback: # Rollback = True
                     parser.Stack.rollback()
@@ -646,7 +651,8 @@ class EngineService(service.Service):
                 pass
 
         def handle_success():
-            ready_nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
+            nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
+            ready_nodes = filter_nodes(nodes, 'UNPROCESSED')
             if ready_nodes:
                 parser.Stack.process_ready_resources(ready_nodes)
             else:
@@ -654,7 +660,6 @@ class EngineService(service.Service):
                     'status': parser.Stack.COMPLETE
                 }
                 db_api.stack_update(cnxt, stack_id, values)
-
 
         stack = db_api.stack_get(cnxt, stack_id)
         reverse = True if stack.action == parser.Stack.DELETE else False
@@ -666,16 +671,13 @@ class EngineService(service.Service):
                 db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
                 handle_success()
             else:
-                if cfg.CONF.action_retry_limit <= attempts:
-                    self.rpc_api.converge_resource(cnxt, stack_id, name, version, attempts + 1)
-                else:
-                    # Failure scenario
-                    values = {
-                        'status': parser.Stack.FAILED,
-                        'status_reason': res.status_reason
-                    }
-                    db_api.stack_update(cnxt, stack_id, values)
-                    handle_failure()
+                # Failure scenario
+                values = {
+                    'status': parser.Stack.FAILED,
+                    'status_reason': res.status_reason
+                }
+                db_api.stack_update(cnxt, stack_id, values)
+                handle_failure()
 
 
     @request_context

@@ -529,12 +529,10 @@ class EngineClient(object):
         return self.cast(cnxt, self.make_msg('converge_resource',
                                              stack_id=stack_id,
                                              name=name,
-                                             version=version,
-                                             attempts=attempts))
+                                             version=version))
 
     def notify_resource_observed(self, cnxt, stack_id, name, version, attempts):
         return self.cast(cnxt, self.make_msg('notify_resource_observed',
                                              stack_id=stack_id,
                                              name=name,
-                                             version=version,
-                                             attempts=attempts))
+                                             version=version))

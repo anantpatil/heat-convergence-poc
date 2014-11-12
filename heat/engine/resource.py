@@ -474,12 +474,16 @@ class Resource(object):
                     LOG.exception(_('Error marking resource as failed'))
         else:
             self.state_set(action, self.COMPLETE)
-#            if action == self.CREATE:
-                # once the resource is successfully created set traversed=True
+        finally:
             db_api.update_resource_traversal(context=self.context,
                                              stack_id=self.stack.id,
                                              status="PROCESSED",
                                              resource_name=self.name)
+            self.stack.rpc_client.notify_resource_observed(self.context,
+                                                           self.stack.id,
+                                                           self.name,
+                                                           self.version)
+
 
     def action_handler_task(self, action, args=[], action_prefix=None):
         '''
