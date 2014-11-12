@@ -736,7 +736,11 @@ class Stack(collections.Mapping):
 
 
     def resource_action_runner(self, resource_name, version):
-        rsrc = self.resources[resource_name]
+        db_rsrc = db_api.resource_get_by_name_and_stack(self.context,
+                                                        resource_name,
+                                                        self.id,
+                                                        version)
+        rsrc = resource.Resource.load(db_rsrc, self)
         action_task = scheduler.TaskRunner(
                             self.resource_action,
                             rsrc)
