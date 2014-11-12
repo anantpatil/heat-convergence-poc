@@ -270,31 +270,24 @@ class Stack(collections.Mapping):
                                  'stack_id': self.id }
                         db_api.graph_insert_egde(self.context, value)
 
-    def process_ready_resources(self, reverse=False):
-        nodes = db_api.get_ready_nodes(context=self.context,
-                                       stack_id=self.id,
-                                       reverse=reverse)
-        if not nodes:
-            action = self.action.lower()
-            complete_action = getattr(self, '%s_complete' % action, None)
-            if callable(complete_action):
-                """args = []
-                if stack_action in (self.ROLLBACK, self.DELETE):
-                    args = [stack_action]
-                complete_action(*args)"""
-                complete_action()
-            return
 
+    @classmethod
+    def process_ready_resources(cls, cnxt, stack_id, ready_nodes=[], reverse=False):
+        if not ready_nodes:
+            ready_nodes = db_api.get_ready_nodes(context=cnxt,
+                                           stack_id=stack_id,
+                                           reverse=reverse)
         def converge_resource(rsrc_name):
-            db_api.update_resource_traversal(context=self.context,
-                                             stack_id=self.id,
+            db_api.update_resource_traversal(context=cnxt,
+                                             stack_id=stack_id,
                                              status='PROCESSING',
                                              resource_name=rsrc_name)
-            self.rpc_client.converge_resource(self.context,
-                                              self.id,
-                                              rsrc_name)
-        [converge_resource(rsrc_name) for rsrc_name, status in nodes
-                                          if status == 'UNPROCESSED']
+            rsrc = db_api.resource_get_by_name_and_stack(cnxt, rsrc_name, stack_id)
+            rc = rpc_client.EngineClient()
+            rc.converge_resource(cnxt, stack_id, rsrc_name, version=rsrc.version)
+
+        [converge_resource(rsrc_name) for rsrc_name, status in ready_nodes
+                                                if status == 'UNPROCESSED']
 
     def reset_dependencies(self):
         self._dependencies = None
@@ -728,34 +721,24 @@ class Stack(collections.Mapping):
             post_func()
         lifecycle_plugin_utils.do_post_ops(self.context, self, None, action,
                                            (self.status == self.FAILED))
-        @scheduler.wrappertask
-        def resource_action(self, r):
-            # Find e.g resource.create and call it
-            action_l = self.action.lower()
-            handle = getattr(r, '%s' % action_l)
 
-            # If a local _$action_kwargs function exists, call it to get the
-            # action specific argument list, otherwise an empty arg list
-            handle_kwargs = getattr(self,
-                                    '_%s_kwargs' % action_l, lambda x: {})
-            yield handle(**handle_kwargs(r))
+    @scheduler.wrappertask
+    def resource_action(self, r):
+        # Find e.g resource.create and call it
+        action_l = self.action.lower()
+        handle = getattr(r, '%s' % action_l)
 
-    def resource_action_runner(self, resource_name):
-        @scheduler.wrappertask
-        def resource_action(self, r):
-            # Find e.g resource.create and call it
-            action_l = self.action.lower()
-            handle = getattr(r, '%s' % action_l)
+        # If a local _$action_kwargs function exists, call it to get the
+        # action specific argument list, otherwise an empty arg list
+        handle_kwargs = getattr(self,
+                                '_%s_kwargs' % action_l, lambda x: {})
+        yield handle(**handle_kwargs(r))
 
-            # If a local _$action_kwargs function exists, call it to get the
-            # action specific argument list, otherwise an empty arg list
-            handle_kwargs = getattr(self,
-                                    '_%s_kwargs' % action_l, lambda x: {})
-            yield handle(**handle_kwargs(r))
 
-        rsrc = self[resource_name]
+    def resource_action_runner(self, resource_name, version):
+        rsrc = self.resources[resource_name]
         action_task = scheduler.TaskRunner(
-                            resource_action,
+                            self.resource_action,
                             rsrc)
         action_task()
 

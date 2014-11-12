@@ -621,27 +621,62 @@ class EngineService(service.Service):
         return api.format_stack_preview(stack)
 
     @request_context
-    def converge_resource(self, cnxt, stack_id, resource_name):
+    def converge_resource(self, cnxt, stack_id, name, version, attempts=0):
         stack = parser.Stack.load(cnxt, stack_id)
         # TODO remove check_create_complete from resource_action
-        stack.resource_action_runner(resource_name)
+        stack.resource_action_runner(name, version)
         # notify Engine to converge
         # TODO notify observer to check_create_complete once observer 
         # code is ready.
-        self.rpc_api.notify_resource_observed(cnxt, stack_id, resource_name)
-        
+        self.rpc_api.notify_resource_observed(cnxt, stack_id, name, version, attempts)
+
 
     @request_context
-    def notify_resource_observed(self, cnxt, stack_id, resource_name):
-        # if status == success, mark ResourceGraph status = PROCESSED
-        #     and inatiate process_ready_nodes
-        # else status != success, initiate rollback if enabled
-        rsrc = db_api.get_resource_by_name_and_stack(cnxt, resource_name, stack_id)
-        # TODO Compare desired/observed state (RandomString)
-        if rsrc.status == 'COMPLETE':
-            db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', resource_name)
-        stack = parser.Stack.load(cnxt, stack_id)
-        stack.process_ready_nodes()
+    def notify_resource_observed(self, cnxt, stack_id, name, version, attempts):
+        def handle_failure():
+            processing_nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
+            if not processing_nodes:
+                if not stack.disable_rollback: # Rollback = True
+                    parser.Stack.rollback()
+                else:
+                    # No rollback, Do nothing
+                    pass
+            else:
+                # Ignore notification. Wait for others to complete
+                pass
+
+        def handle_success():
+            ready_nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
+            if ready_nodes:
+                parser.Stack.process_ready_resources(ready_nodes)
+            else:
+                values = {
+                    'status': parser.Stack.COMPLETE
+                }
+                db_api.stack_update(cnxt, stack_id, values)
+
+
+        stack = db_api.stack_get(cnxt, stack_id)
+        reverse = True if stack.action == parser.Stack.DELETE else False
+        if stack.status == parser.Stack.FAILED:
+            handle_failure()
+        else:
+            res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id, version)
+            if res.status == res.COMPLETE:
+                db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
+                handle_success()
+            else:
+                if cfg.CONF.action_retry_limit <= attempts:
+                    self.rpc_api.converge_resource(cnxt, stack_id, name, version, attempts + 1)
+                else:
+                    # Failure scenario
+                    values = {
+                        'status': parser.Stack.FAILED,
+                        'status_reason': res.status_reason
+                    }
+                    db_api.stack_update(cnxt, stack_id, values)
+                    handle_failure()
+
 
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
