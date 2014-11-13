@@ -631,7 +631,6 @@ class EngineService(service.Service):
         # code is ready.
         self.rpc_api.notify_resource_observed(cnxt, stack_id, name, version)
 
-
     @request_context
     def notify_resource_observed(self, cnxt, stack_id, name, version):
         def filter_nodes(nodes, status):
@@ -641,8 +640,11 @@ class EngineService(service.Service):
             nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
             processing_nodes = filter_nodes(nodes, 'PROCESSING')
             if not processing_nodes:
-                if not stack.disable_rollback: # Rollback = True
-                    parser.Stack.rollback()
+                # Rollback = True and action is CREATE/UPDATE
+                if (not stack.disable_rollback and
+                        stack.action in (stack.CREATE, stack.UPDATE)):
+                    current_stack = parser.Stack.load(cnxt, stack_id)
+                    current_stack.rollback()
                 else:
                     # No rollback, Do nothing
                     pass
@@ -680,7 +682,6 @@ class EngineService(service.Service):
                 }
                 db_api.stack_update(cnxt, stack_id, values)
                 handle_failure()
-
 
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
@@ -777,6 +778,11 @@ class EngineService(service.Service):
                 current_stack.env,
                 args.get(rpc_api.PARAM_CLEAR_PARAMETERS, []))
         tmpl = templatem.Template(template, files=files, env=env)
+        # NOTE: set predecessor only if the earlier one realized.
+        if current_stack.status == 'COMPLETE':
+            tmpl.predecessor = current_stack.t.id
+        else:
+            tmpl.id = current_stack.t.id
         if len(tmpl[tmpl.RESOURCES]) > cfg.CONF.max_resources_per_stack:
             raise exception.RequestLimitExceeded(
                 message=exception.StackResourceLimitExceeded.msg_fmt)

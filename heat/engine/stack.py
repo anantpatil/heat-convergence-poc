@@ -660,11 +660,6 @@ class Stack(collections.Mapping):
         Stack.process_ready_resources(self.context, stack_id=self.id,
                                       reverse=True)
 
-    def create_complete(self):
-        #(TODO) : Handle failure
-        reason = 'Stack %s completed successfully' % self.action
-        self.state_set(self.action, self.COMPLETE, reason)
-
     def _adopt_kwargs(self, resource):
         data = self.adopt_stack_data
         if not data or not data.get('resources'):
@@ -815,7 +810,7 @@ class Stack(collections.Mapping):
         creator(timeout=self.timeout_secs())
 
     @profiler.trace('Stack.update', hide_args=False)
-    def update(self, newstack=None, event=None):
+    def update(self, newstack=None, event=None, action=UPDATE):
         '''
         Compare the current stack with newstack,
         and where necessary create/update/delete the resources until
@@ -827,10 +822,9 @@ class Stack(collections.Mapping):
         Update will fail if it exceeds the specified timeout. The default is
         60 minutes, set in the constructor
         '''
-        self.state_set(self.UPDATE, self.IN_PROGRESS,
-                       'Stack %s started' % self.UPDATE)
+        self.state_set(action, self.IN_PROGRESS,
+                       'Stack %s started' % action)
         newstack.id = self.id
-        newstack.t.predecessor = self.t.id
         newstack.action = self.action
         newstack.status = self.status
         newstack.status_reason = self.status_reason
@@ -1280,3 +1274,18 @@ class Stack(collections.Mapping):
         # of other resources, so ensure that attributes are re-calculated
         for res in self.resources.itervalues():
             res.attributes.reset_resolved_values()
+
+    def rollback(self):
+        if self.t.predecessor_id:
+            raw_template = Template.load(self.context,
+                                         self.t.predecessor_id)
+        else:
+            # NOTE: update with an empty template to DELETE the stack.
+            empty_template = {'heat_template_version': self.t.version[1]}
+            raw_template = Template(json.dumps(empty_template))
+
+        new_stack = Stack(self.context, self.name, raw_template, self.env)
+        self.state_set(self.ROLLBACK,
+                       self.IN_PROGRESS,
+                       'Stack %s started' % self.ROLLBACK)
+        self.update(new_stack, action=self.ROLLBACK)
