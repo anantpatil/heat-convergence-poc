@@ -657,8 +657,7 @@ class Stack(collections.Mapping):
     def create_start(self):
         for res in self.resources.values():
             res.state_set(res.CREATE, res.INIT)
-        Stack.process_ready_resources(self.context, stack_id=self.id,
-                                      reverse=True)
+        Stack.process_ready_resources(self.context, stack_id=self.id)
 
     def _adopt_kwargs(self, resource):
         data = self.adopt_stack_data
@@ -867,8 +866,7 @@ class Stack(collections.Mapping):
                                                          resource_name=new_res.name)
                 else:
                     new_res.state_set(new_res.CREATE, new_res.INIT)
-        Stack.process_ready_resources(self.context, stack_id=self.id,
-                                         reverse=True)
+        Stack.process_ready_resources(self.context, stack_id=self.id)
 
     @scheduler.wrappertask
     def update_task(self, oldstack, action=UPDATE, event=None):

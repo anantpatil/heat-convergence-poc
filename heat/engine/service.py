@@ -43,6 +43,7 @@ from heat.engine import environment
 from heat.engine.event import Event
 from heat.engine import parameter_groups
 from heat.engine import properties
+from heat.engine import resource as resourcem
 from heat.engine import resources
 from heat.engine import stack as parser
 from heat.engine import stack_lock
@@ -671,7 +672,7 @@ class EngineService(service.Service):
             handle_failure()
         else:
             res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id, version)
-            if res.status == res.COMPLETE:
+            if res.status == resourcem.Resource.COMPLETE:
                 db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
                 handle_success()
             else:

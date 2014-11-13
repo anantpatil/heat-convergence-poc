@@ -556,7 +556,7 @@ class Resource(object):
         to customise creation.
         '''
         action = self.CREATE
-        if (self.action, self.status) != (self.INIT, self.COMPLETE):
+        if (self.action, self.status) != (self.CREATE, self.INIT):
             exc = exception.Error(_('State %s invalid for create')
                                   % six.text_type(self.state))
             raise exception.ResourceFailure(exc, self, action)
