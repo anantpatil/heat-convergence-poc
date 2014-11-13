@@ -272,7 +272,8 @@ class Stack(collections.Mapping):
 
 
     @classmethod
-    def process_ready_resources(cls, cnxt, stack_id, ready_nodes=[], reverse=False):
+    def process_ready_resources(cls, cnxt, stack_id, ready_nodes=[],
+                                reverse=False):
         if not ready_nodes:
             ready_nodes = db_api.get_ready_nodes(context=cnxt,
                                            stack_id=stack_id,
@@ -656,7 +657,8 @@ class Stack(collections.Mapping):
     def create_start(self):
         for res in self.resources.values():
             res.state_set(res.CREATE, res.INIT)
-        self.process_ready_resources()
+        Stack.process_ready_resources(self.context, stack_id=self.id,
+                                      reverse=True)
 
     def create_complete(self):
         #(TODO) : Handle failure
@@ -740,7 +742,9 @@ class Stack(collections.Mapping):
                                                         resource_name,
                                                         self.id,
                                                         version)
+        LOG.debug("=====Resource name %s, version %s", resource_name, version)
         rsrc = resource.Resource.load(db_rsrc, self)
+        LOG.debug("=====Resource %s", rsrc)
         action_task = scheduler.TaskRunner(
                             self.resource_action,
                             rsrc)
@@ -823,7 +827,8 @@ class Stack(collections.Mapping):
         Update will fail if it exceeds the specified timeout. The default is
         60 minutes, set in the constructor
         '''
-        self.state_set(self.UPDATE, self.IN_PROGRESS, "Update in Progress")
+        self.state_set(self.UPDATE, self.IN_PROGRESS,
+                       'Stack %s started' % self.UPDATE)
         newstack.id = self.id
         newstack.t.predecessor = self.t.id
         newstack.action = self.action
@@ -868,7 +873,8 @@ class Stack(collections.Mapping):
                                                          resource_name=new_res.name)
                 else:
                     new_res.state_set(new_res.CREATE, new_res.INIT)
-        newstack.process_ready_resources()
+        Stack.process_ready_resources(self.context, stack_id=self.id,
+                                         reverse=True)
 
     @scheduler.wrappertask
     def update_task(self, oldstack, action=UPDATE, event=None):
@@ -1010,7 +1016,8 @@ class Stack(collections.Mapping):
         for snapshot in snapshots:
             self.delete_snapshot(snapshot)
 
-        self.process_ready_resources(reverse=True)
+        Stack.process_ready_resources(self.context, stack_id=self.id,
+                                     reverse=True)
 
     def delete_complete(self, abandon=False):
         #(TODO) : Handle failure

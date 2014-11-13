@@ -654,7 +654,9 @@ class EngineService(service.Service):
             nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
             ready_nodes = filter_nodes(nodes, 'UNPROCESSED')
             if ready_nodes:
-                parser.Stack.process_ready_resources(ready_nodes)
+                parser.Stack.process_ready_resources(cnxt, stack_id,
+                                                     ready_nodes,
+                                                     reverse=reverse)
             else:
                 values = {
                     'status': parser.Stack.COMPLETE
