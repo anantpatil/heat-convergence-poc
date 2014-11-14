@@ -985,15 +985,30 @@ def resource_exists_in_graph(context, stack_id, resource_name):
 def get_ready_nodes(context, stack_id, reverse):
     rg = models.ResourceGraph
     if reverse:
-        query = model_query(context, rg.resource_name, rg.status).\
-                filter(rg.status != rg.PROCESSED).\
-                filter(rg.stack_id == stack_id).\
-                filter(or_(rg.needed_by == '',
-                           rg.needed_by.in_(
-                            model_query(context, rg.resource_name).\
-                            filter(rg.resource_name == rg.PROCESSED).\
-                            filter(rg.stack_id == stack_id).subquery())))
-        return query.distinct().all()
+        result = []
+        # Fetch all the nodes which does not have a needed_by
+        nodes_without_needed_by = model_query(context, rg.resource_name, rg.status).\
+                                    filter(rg.status != rg.PROCESSED).\
+                                    filter(rg.stack_id == stack_id).\
+                                    filter(rg.needed_by == '').all()
+        # Fetch all nodes which are processed
+        processed_nodes = [res for (res,) in model_query(context, rg.resource_name).\
+                                                filter(rg.status == rg.PROCESSED).\
+                                                filter(rg.stack_id == stack_id).all()]
+        # Fetch all nodes whose even one needed_by is processed
+        next_nodes = model_query(context, rg.resource_name, rg.status).\
+                        filter(rg.status != rg.PROCESSED).\
+                        filter(rg.stack_id == stack_id).\
+                        filter(rg.needed_by.in_(processed_nodes)).distinct().all()
+
+        # Filter out the nodes for which all needed_by are not processed
+        for node, status in next_nodes:
+            needed_by_nodes = [res for (res,) in model_query(context, rg.needed_by).\
+                                                    filter(rg.resource_name == node).\
+                                                    filter(rg.stack_id == stack_id).all()]
+            if set(needed_by_nodes).issubset(set(processed_nodes)):
+                result.append(next_nodes((node, status)))
+        return list(set(result + nodes_without_needed_by))
     else:
         query = model_query(context, rg.resource_name, rg.status).\
                 filter(rg.status != rg.PROCESSED).\
