@@ -1,0 +1,29 @@
+heat_template_version: 2013-05-23
+description: Random String templates
+
+parameters:
+    len:
+        type: string
+        default: 16
+    salt:
+        type: string
+        default: "quickbrownfox"
+    char_classes:
+        type: string
+        default: [{"class": "hexdigits", "min": 4}]
+
+resources:
+    db_passwd:
+        type: OS::Heat::RandomString
+        properties:
+            length: {get_param: len}
+            salt: {get_param: salt}
+            character_classes: {get_param: char_classes}
+
+    unix_passwd:
+        type: OS::Heat::RandomString
+        properties:
+            #length: {get_param: len}
+            length: 32
+            salt: {get_param: salt}
+            character_classes: {get_param: char_classes}
