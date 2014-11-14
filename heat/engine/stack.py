@@ -721,7 +721,7 @@ class Stack(collections.Mapping):
     @scheduler.wrappertask
     def resource_action(self, r):
         # Find e.g resource.create and call it
-        action_l = self.action.lower()
+        action_l = r.action.lower()
         handle = getattr(r, '%s' % action_l)
 
         # If a local _$action_kwargs function exists, call it to get the
@@ -853,6 +853,9 @@ class Stack(collections.Mapping):
                 #create_new_resource_version( old_res, res.DELETE)
                 res_obj = resource.Resource.load(old_res, self)
                 create_new_resource_version(res_obj, old_res, res_obj.DELETE)
+                db_api.update_resource_traversal(self.context, self.id,
+                                                 status="PROCESSED",
+                                                 resource_name=res_obj.name)
             else:
                 if old_res:
                     old_rsrc_defn = rsrc_defn.ResourceDefinition.from_dict(

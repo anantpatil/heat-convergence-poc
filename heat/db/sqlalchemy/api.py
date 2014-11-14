@@ -991,7 +991,7 @@ def get_ready_nodes(context, stack_id, reverse):
                 filter(or_(rg.needed_by == '',
                            rg.needed_by.in_(
                             model_query(context, rg.resource_name).\
-                            filter(rg.resource_name != rg.PROCESSED).\
+                            filter(rg.resource_name == rg.PROCESSED).\
                             filter(rg.stack_id == stack_id).subquery())))
         return query.distinct().all()
     else:

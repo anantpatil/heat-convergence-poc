@@ -630,7 +630,7 @@ class EngineService(service.Service):
         # notify Engine to converge
         # TODO notify observer to check_create_complete once observer 
         # code is ready.
-        self.rpc_api.notify_resource_observed(cnxt, stack_id, name, version)
+        stack.rpc_client.notify_resource_observed(cnxt, stack_id, name, version)
 
     @request_context
     def notify_resource_observed(self, cnxt, stack_id, name, version):
@@ -661,10 +661,17 @@ class EngineService(service.Service):
                                                      ready_nodes,
                                                      reverse=reverse)
             else:
-                values = {
-                    'status': parser.Stack.COMPLETE
-                }
-                db_api.stack_update(cnxt, stack_id, values)
+                # Call DB methods based on the action
+                if stack.action == parser.Stack.DELETE:
+                    stack_obj = parser.Stack.load(cnxt, stack_id)
+                    stack_obj.delete_complete()
+                else:
+                    values = {
+                        'status': parser.Stack.COMPLETE,
+                        'status_reason': 'Stack %s completed successfully' %
+                                         stack.action
+                    }
+                    db_api.stack_update(cnxt, stack_id, values)
 
         stack = db_api.stack_get(cnxt, stack_id)
         reverse = True if stack.action == parser.Stack.DELETE else False

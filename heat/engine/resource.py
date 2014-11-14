@@ -479,11 +479,6 @@ class Resource(object):
                                              stack_id=self.stack.id,
                                              status="PROCESSED",
                                              resource_name=self.name)
-            self.stack.rpc_client.notify_resource_observed(self.context,
-                                                           self.stack.id,
-                                                           self.name,
-                                                           self.version)
-
 
     def action_handler_task(self, action, args=[], action_prefix=None):
         '''
@@ -692,7 +687,22 @@ class Resource(object):
         return self._needs_update(after, before, after_props, before_props, None)
 
     @scheduler.wrappertask
-    def update(self, after, before=None, prev_resource=None):
+    def update(self):
+        #TODO: for concurrent update, version -1 might not have realized.
+        db_resource = db_api.resource_get_by_name_and_stack(self.context,
+                                                            self.name,
+                                                            self.stack.id,
+                                                            version=self.version - 1)
+        old_resource = Resource.load(db_resource, self.stack)
+        try:
+            yield self.do_update(self._frozen_defn, old_resource._frozen_defn)
+        except UpdateReplace:
+            # Resource does not support in-place update, create a new one.
+            self.action = Resource.CREATE
+            self.status = Resource.INIT
+            yield self.create()
+
+    def do_update(self, after, before=None, prev_resource=None):
         '''
         update the resource. Subclasses should provide a handle_update() method
         to customise update, the base-class handle_update will fail by default.
