@@ -16,6 +16,7 @@ import functools
 import json
 import os
 
+import datetime
 import eventlet
 from oslo.config import cfg
 from oslo import messaging
@@ -623,11 +624,11 @@ class EngineService(service.Service):
 
 
     @request_context
-    def converge_resource(self, cnxt, stack_id, name, version):
+    def converge_resource(self, cnxt, stack_id, name, version, timeout):
         stack = parser.Stack.load(cnxt, stack_id)
         # TODO remove check_create_complete from resource_action
         try:
-            stack.resource_action_runner(name, version)
+            stack.resource_action_runner(name, version, timeout)
         except Exception as e:
             stack.state_set(stack.action, stack.FAILED, e.args[0] if e.args
                             else 'Failed stack pre-ops: %s' % six.text_type(e))
@@ -658,24 +659,37 @@ class EngineService(service.Service):
                 pass
 
         def handle_success():
+            def get_stack_timeout_delta(stack_timeout):
+                delta = datetime.datetime.now().replace(microsecond=0) - timeout
+                timeout = stack.timeout if stack.timeout else cfg.CONF.stack_action_timeout
+                return (timeout * 60) - delta.seconds
+
+            if stack.action == parser.Stack.CREATE:
+                delta_timeout = get_stack_timeout_delta(stack.created_at)
+            elif stack.action == parser.Stack.DELETE:
+                delta_timeout = None
+            else:
+                delta_timeout = get_stack_timeout_delta(stack.updated_at)
+
             nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
             ready_nodes = filter_nodes(nodes, 'UNPROCESSED')
             if ready_nodes:
                 parser.Stack.process_ready_resources(cnxt, stack_id,
                                                      ready_nodes,
-                                                     reverse=reverse)
+                                                     reverse=reverse,
+                                                     timeout=delta_timeout)
             else:
                 # Call DB methods based on the action
                 if stack.action == parser.Stack.DELETE:
                     stack_obj = parser.Stack.load(cnxt, stack_id)
                     stack_obj.delete_complete()
                 else:
-                    values = {
+                    data = {
                         'status': parser.Stack.COMPLETE,
                         'status_reason': 'Stack %s completed successfully' %
                                          stack.action
                     }
-                    db_api.stack_update(cnxt, stack_id, values)
+                    db_api.stack_update(cnxt, stack_id, data)
 
         stack = db_api.stack_get(cnxt, stack_id)
         reverse = True if stack.action == parser.Stack.DELETE else False

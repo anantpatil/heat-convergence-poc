@@ -273,7 +273,7 @@ class Stack(collections.Mapping):
 
     @classmethod
     def process_ready_resources(cls, cnxt, stack_id, ready_nodes=[],
-                                reverse=False):
+                                reverse=False, timeout=None):
         if not ready_nodes:
             ready_nodes = db_api.get_ready_nodes(context=cnxt,
                                            stack_id=stack_id,
@@ -285,7 +285,7 @@ class Stack(collections.Mapping):
                                              resource_name=rsrc_name)
             rsrc = db_api.resource_get_by_name_and_stack(cnxt, rsrc_name, stack_id)
             rc = rpc_client.EngineClient()
-            rc.converge_resource(cnxt, stack_id, rsrc_name, version=rsrc.version)
+            rc.converge_resource(cnxt, stack_id, rsrc_name, version=rsrc.version, timeout=timeout)
 
         [converge_resource(rsrc_name) for rsrc_name, status in ready_nodes
                                                 if status == 'UNPROCESSED']
@@ -657,7 +657,8 @@ class Stack(collections.Mapping):
     def create_start(self):
         for res in self.resources.values():
             res.state_set(res.CREATE, res.INIT)
-        Stack.process_ready_resources(self.context, stack_id=self.id)
+        Stack.process_ready_resources(self.context, stack_id=self.id,
+                                      timeout=self.timeout_secs())
 
     def _adopt_kwargs(self, resource):
         data = self.adopt_stack_data
@@ -731,7 +732,7 @@ class Stack(collections.Mapping):
         yield handle(**handle_kwargs(r))
 
 
-    def resource_action_runner(self, resource_name, version):
+    def resource_action_runner(self, resource_name, version, timeout):
         db_rsrc = db_api.resource_get_by_name_and_stack(self.context,
                                                         resource_name,
                                                         self.id,
@@ -742,7 +743,7 @@ class Stack(collections.Mapping):
         action_task = scheduler.TaskRunner(
                             self.resource_action,
                             rsrc)
-        action_task()
+        action_task(timeout=timeout)
 
     @scheduler.wrappertask
     def resource_delete(self, rsrc_name):
@@ -869,7 +870,7 @@ class Stack(collections.Mapping):
                                                          resource_name=new_res.name)
                 else:
                     new_res.state_set(new_res.CREATE, new_res.INIT)
-        Stack.process_ready_resources(self.context, stack_id=self.id)
+        Stack.process_ready_resources(self.context, stack_id=self.id, timeout=self.timeout_secs())
 
     @scheduler.wrappertask
     def update_task(self, oldstack, action=UPDATE, event=None):
@@ -1019,7 +1020,7 @@ class Stack(collections.Mapping):
             self.delete_snapshot(snapshot)
 
         Stack.process_ready_resources(self.context, stack_id=self.id,
-                                     reverse=True)
+                                     reverse=True, timeout=self.timeout_secs())
 
     def delete_complete(self, abandon=False):
         #(TODO) : Handle failure
