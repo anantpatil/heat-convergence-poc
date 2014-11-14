@@ -134,7 +134,7 @@ def resource_get(context, resource_id):
 
 
 def resource_get_by_name_and_stack(context, resource_name, stack_id, version=None):
-    if version:
+    if version is not None:
         result = model_query(context, models.Resource).\
             filter_by(name=resource_name).\
             filter_by(stack_id=stack_id). \
