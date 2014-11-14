@@ -626,7 +626,11 @@ class EngineService(service.Service):
     def converge_resource(self, cnxt, stack_id, name, version):
         stack = parser.Stack.load(cnxt, stack_id)
         # TODO remove check_create_complete from resource_action
-        stack.resource_action_runner(name, version)
+        try:
+            stack.resource_action_runner(name, version)
+        except Exception as e:
+            stack.state_set(stack.action, stack.FAILED, e.args[0] if e.args
+                            else 'Failed stack pre-ops: %s' % six.text_type(e))
         # notify Engine to converge
         # TODO notify observer to check_create_complete once observer 
         # code is ready.

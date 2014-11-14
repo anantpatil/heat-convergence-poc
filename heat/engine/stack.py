@@ -1003,6 +1003,13 @@ class Stack(collections.Mapping):
 
         self.state_set(action, self.IN_PROGRESS, 'Stack %s started' %
                        action)
+        for res in self.resources.values():
+            db_res = db_api.resource_get_by_name_and_stack(self.context,
+                                                           res.name,
+                                                           self.id)
+            res_obj = resource.Resource.load(db_res, self)
+            res_obj.state_set(res_obj.DELETE, res_obj.INIT)
+
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.id,
                                          status="UNPROCESSED")

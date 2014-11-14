@@ -1007,7 +1007,7 @@ def get_ready_nodes(context, stack_id, reverse):
                                                     filter(rg.resource_name == node).\
                                                     filter(rg.stack_id == stack_id).all()]
             if set(needed_by_nodes).issubset(set(processed_nodes)):
-                result.append(next_nodes((node, status)))
+                result.append((node, status))
         return list(set(result + nodes_without_needed_by))
     else:
         query = model_query(context, rg.resource_name, rg.status).\
