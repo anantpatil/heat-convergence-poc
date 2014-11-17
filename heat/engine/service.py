@@ -660,7 +660,7 @@ class EngineService(service.Service):
 
         def handle_success():
             def get_stack_timeout_delta(stack_timeout):
-                delta = datetime.datetime.now().replace(microsecond=0) - timeout
+                delta = datetime.datetime.now().replace(microsecond=0) - stack_timeout
                 timeout = stack.timeout if stack.timeout else cfg.CONF.stack_action_timeout
                 return (timeout * 60) - delta.seconds
 
@@ -692,7 +692,8 @@ class EngineService(service.Service):
                     db_api.stack_update(cnxt, stack_id, data)
 
         stack = db_api.stack_get(cnxt, stack_id)
-        reverse = True if stack.action == parser.Stack.DELETE else False
+        reverse_actions = [parser.Stack.DELETE, parser.Stack.ROLLBACK]
+        reverse = True if stack.action in reverse_actions else False
         if stack.status == parser.Stack.FAILED:
             handle_failure()
         else:
