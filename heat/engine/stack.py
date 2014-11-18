@@ -264,12 +264,7 @@ class Stack(collections.Mapping):
                         db_api.graph_delete_egde(self.context, value)
 
                     added_edges = set(new_required_by) - set(old_required_by)
-                    for edge in added_edges:
-                        value = {'resource_name': res.name,
-                                 'needed_by': edge,
-                                 'stack_id': self.id }
-                        db_api.graph_insert_egde(self.context, value)
-
+                    self._store_edges(res.name, added_edges)
 
     @classmethod
     def process_ready_resources(cls, cnxt, stack_id, ready_nodes=[],
