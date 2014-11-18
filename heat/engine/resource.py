@@ -109,7 +109,7 @@ class Resource(object):
     # Default name to use for calls to self.client()
     default_client_name = None
 
-    def __new__(cls, name, definition, stack, version=0):
+    def __new__(cls, name, definition, stack, version=0, load_from_db=False):
         '''Create a new Resource of the appropriate class for its type.'''
 
         assert isinstance(definition, rsrc_defn.ResourceDefinition)
@@ -149,7 +149,7 @@ class Resource(object):
 
         return super(Resource, cls).__new__(ResourceClass)
 
-    def __init__(self, name, definition, stack, version=0):
+    def __init__(self, name, definition, stack, version=None, load_from_db=False):
         if '/' in name:
             raise ValueError(_('Resource name may not contain "/"'))
 
@@ -178,8 +178,17 @@ class Resource(object):
         self._stored_properties_data = None
         self.created_time = None
         self.updated_time = None
-        self.version = 0
+        if version is None:
+            self.version = 0
+        else:
+            self.version = version
         self._frozen_defn = None
+        if load_from_db:
+            # Try loading from DB
+            db_resource = db_api.resource_get_by_name_and_stack(
+                self.stack.context, self.name, self.stack.id, version=version)
+            if db_resource:
+                self.load_data(db_resource)
 
     @classmethod
     def load(cls, db_resource, stack):

@@ -166,7 +166,7 @@ class Stack(collections.Mapping):
     @property
     def resources(self):
         if self._resources is None:
-            self._resources = dict((name, resource.Resource(name, data, self))
+            self._resources = dict((name, resource.Resource(name, data, self, load_from_db=True))
                                    for (name, data) in
                                    self.t.resource_definitions(self).items())
             # There is no need to continue storing the db resources

@@ -679,6 +679,10 @@ class EngineService(service.Service):
                                                      reverse=reverse,
                                                      timeout=delta_timeout)
             else:
+                in_progress_nodes = filter_nodes(nodes, 'PROCESSING')
+                if in_progress_nodes:
+                    # There are still nodes under process, wait for notification from them
+                    return
                 # Call DB methods based on the action
                 if stack.action == parser.Stack.DELETE:
                     stack_obj = parser.Stack.load(cnxt, stack_id)
