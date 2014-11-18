@@ -642,6 +642,11 @@ class EngineService(service.Service):
         def filter_nodes(nodes, status):
             return filter(lambda (res_name, res_status): res_status == status, nodes)
 
+        def get_stack_timeout_delta(stack_timeout):
+            delta = datetime.datetime.now().replace(microsecond=0) - stack_timeout
+            timeout = stack.timeout if stack.timeout else cfg.CONF.stack_action_timeout
+            return (timeout * 60) - delta.seconds
+
         def handle_failure():
             nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
             processing_nodes = filter_nodes(nodes, 'PROCESSING')
@@ -650,7 +655,11 @@ class EngineService(service.Service):
                 if (not stack.disable_rollback and
                         stack.action in (stack.CREATE, stack.UPDATE)):
                     current_stack = parser.Stack.load(cnxt, stack_id)
-                    current_stack.rollback()
+                    lock = stack_lock.StackLock(cnxt,
+                                                current_stack,
+                                                self.engine_id)
+                    with lock.thread_lock(stack_id):
+                        current_stack.rollback()
                 else:
                     # No rollback, Do nothing
                     pass
@@ -659,11 +668,6 @@ class EngineService(service.Service):
                 pass
 
         def handle_success():
-            def get_stack_timeout_delta(stack_timeout):
-                delta = datetime.datetime.now().replace(microsecond=0) - stack_timeout
-                timeout = stack.timeout if stack.timeout else cfg.CONF.stack_action_timeout
-                return (timeout * 60) - delta.seconds
-
             if stack.action == parser.Stack.CREATE:
                 delta_timeout = get_stack_timeout_delta(stack.created_at)
             elif stack.action == parser.Stack.DELETE:
@@ -696,14 +700,21 @@ class EngineService(service.Service):
                     db_api.stack_update(cnxt, stack_id, data)
 
         stack = db_api.stack_get(cnxt, stack_id)
+        # check if a newer version of resource is available.
+        res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id)
+        if res.version > version:
+            # newer version of resource definition is available
+            Stack.process_ready_resources(
+                cnxt, stack_id=stack_id,
+                timeout=get_stack_timeout_delta(stack.updated_at))
+            return
         reverse_actions = [parser.Stack.DELETE, parser.Stack.ROLLBACK]
         reverse = True if stack.action in reverse_actions else False
+        db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
         if stack.status == parser.Stack.FAILED:
             handle_failure()
         else:
-            res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id, version)
             if res.status == resourcem.Resource.COMPLETE:
-                db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
                 handle_success()
             else:
                 # Failure scenario

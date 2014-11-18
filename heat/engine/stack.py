@@ -287,6 +287,24 @@ class Stack(collections.Mapping):
             rc = rpc_client.EngineClient()
             rc.converge_resource(cnxt, stack_id, rsrc_name, version=rsrc.version, timeout=timeout)
 
+        def filter_in_progress_nodes():
+            # to avoid processing a resource which is IN_PROGRESS,
+            # return only those resources which are not in IN_PROGRESS.
+            node_dict = dict(ready_nodes)
+            filters = {'status': resource.Resource.IN_PROGRESS}
+            try:
+                resources = db_api.resource_get_all_by_stack(cnxt,
+                                                             stack_id,
+                                                             filters)
+            except exception.NotFound:
+                return ready_nodes
+            nodes = [(name, status)
+                     for name, status in ready_nodes
+                     if name not in resources
+            ]
+            return nodes
+
+        ready_nodes = filter_in_progress_nodes()
         [converge_resource(rsrc_name) for rsrc_name, status in ready_nodes
                                                 if status == 'UNPROCESSED']
 
@@ -1294,7 +1312,4 @@ class Stack(collections.Mapping):
             raw_template = Template(json.dumps(empty_template))
 
         new_stack = Stack(self.context, self.name, raw_template, self.env)
-        self.state_set(self.ROLLBACK,
-                       self.IN_PROGRESS,
-                       'Stack %s started' % self.ROLLBACK)
         self.update(new_stack, action=self.ROLLBACK)

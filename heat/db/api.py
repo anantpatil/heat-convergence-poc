@@ -96,8 +96,8 @@ def resource_exchange_stacks(context, resource_id1, resource_id2):
     return IMPL.resource_exchange_stacks(context, resource_id1, resource_id2)
 
 
-def resource_get_all_by_stack(context, stack_id):
-    return IMPL.resource_get_all_by_stack(context, stack_id)
+def resource_get_all_by_stack(context, stack_id, filters={}):
+    return IMPL.resource_get_all_by_stack(context, stack_id, filters)
 
 
 def resource_get_by_name_and_stack(context, resource_name, stack_id,

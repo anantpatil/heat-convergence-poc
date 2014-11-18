@@ -289,11 +289,12 @@ def resource_create(context, values):
     return resource_ref
 
 
-def resource_get_all_by_stack(context, stack_id):
-    results = model_query(context, models.Resource).\
-        filter_by(stack_id=stack_id).\
-        options(orm.joinedload("data")).all()
+def resource_get_all_by_stack(context, stack_id, filters={}):
+    query = model_query(context, models.Resource).filter_by(stack_id=stack_id)
+    if filters:
+        query = filters.exact_filter(query, models.Resource, filters)
 
+    results = query.options(orm.joinedload("data")).all()
     if not results:
         raise exception.NotFound(_("no resources for stack_id %s were found")
                                  % stack_id)
