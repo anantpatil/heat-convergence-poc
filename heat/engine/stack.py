@@ -874,6 +874,7 @@ class Stack(collections.Mapping):
         newstack.action = self.action
         newstack.status = self.status
         newstack.status_reason = self.status_reason
+        newstack.updated_time = datetime.utcnow()
         newstack.store()
         
         # Mark all nodes as UNPROCESSED
