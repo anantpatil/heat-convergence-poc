@@ -653,7 +653,7 @@ class EngineService(service.Service):
             if not processing_nodes:
                 # Rollback = True and action is CREATE/UPDATE
                 if (not stack.disable_rollback and
-                        stack.action in (stack.CREATE, stack.UPDATE)):
+                        stack.action in (parser.Stack.CREATE, parser.Stack.UPDATE)):
                     current_stack = parser.Stack.load(cnxt, stack_id)
                     lock = stack_lock.StackLock(cnxt,
                                                 current_stack,

@@ -1352,13 +1352,13 @@ class Stack(collections.Mapping):
             res.attributes.reset_resolved_values()
 
     def rollback(self):
-        if self.t.predecessor_id:
+        if self.t.predecessor:
             raw_template = Template.load(self.context,
                                          self.t.predecessor_id)
         else:
             # NOTE: update with an empty template to DELETE the stack.
             empty_template = {'heat_template_version': self.t.version[1]}
-            raw_template = Template(json.dumps(empty_template))
+            raw_template = Template(empty_template)
 
         new_stack = Stack(self.context, self.name, raw_template, self.env)
         self.update(new_stack, action=self.ROLLBACK)
