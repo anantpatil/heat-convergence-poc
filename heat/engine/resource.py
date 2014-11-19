@@ -483,11 +483,6 @@ class Resource(object):
                     LOG.exception(_('Error marking resource as failed'))
         else:
             self.state_set(action, self.COMPLETE)
-        finally:
-            db_api.update_resource_traversal(context=self.context,
-                                             stack_id=self.stack.id,
-                                             status="PROCESSED",
-                                             resource_name=self.name)
 
     def action_handler_task(self, action, args=[], action_prefix=None):
         '''
@@ -709,6 +704,14 @@ class Resource(object):
             # Resource does not support in-place update, create a new one.
             self.action = Resource.CREATE
             self.status = Resource.INIT
+            self.store_update(self.action, self.status, "Create new resource")
+            # Move the phy resource id to old resource
+            old_resource.resource_id = self.resource_id
+            old_resource.action = self.DELETE
+            old_resource.status = self.INIT
+            old_resource.store_update(
+                old_resource.action, old_resource.status,
+                "Remove nova_instance from old resource version")
             yield self.create()
 
     def do_update(self, after, before=None, prev_resource=None):
@@ -894,6 +897,20 @@ class Resource(object):
                 else:
                     action_args = []
                 yield self.action_handler_task(action, *action_args)
+
+    @classmethod
+    def delete_older_versions_from_db(cls, context, db_rsrc, stack_id, version):
+        '''
+        Only delete older versions
+        :param res:
+        :return:
+        '''
+        LOG.debug("==== Deleting older version for %s: ", db_rsrc.name)
+        db_resources = db_api.resource_get_all_versions_by_name_and_stack(
+            context, db_rsrc.name, stack_id)
+        for db_res in db_resources:
+            if db_res.version < version and db_res.nova_instance is None:
+                db_api.resource_delete(context, db_res.id)
 
     @scheduler.wrappertask
     def destroy(self):

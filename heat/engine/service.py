@@ -688,9 +688,12 @@ class EngineService(service.Service):
                     # There are still nodes under process, wait for notification from them
                     return
                 # Call DB methods based on the action
+                stack_obj = parser.Stack.load(cnxt, stack_id)
                 if stack.action == parser.Stack.DELETE:
-                    stack_obj = parser.Stack.load(cnxt, stack_id)
                     stack_obj.delete_complete()
+                elif stack.action == parser.Stack.UPDATE and \
+                                stack.status != parser.Stack.GC_IN_PROGRESS:
+                    stack_obj.pre_update_complete()
                 else:
                     data = {
                         'status': parser.Stack.COMPLETE,
@@ -701,20 +704,36 @@ class EngineService(service.Service):
 
         stack = db_api.stack_get(cnxt, stack_id)
         # check if a newer version of resource is available.
-        res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id)
-        if res.version > version:
+        res_latest = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id)
+        if res_latest.version > version and \
+                        stack.status != parser.Stack.GC_IN_PROGRESS:
             # newer version of resource definition is available
-            Stack.process_ready_resources(
+            # Only in case of update_replace GC, we will be working on older resource
+            #TODO: change this logic
+            parser.Stack.process_ready_resources(
                 cnxt, stack_id=stack_id,
                 timeout=get_stack_timeout_delta(stack.updated_at))
             return
         reverse_actions = [parser.Stack.DELETE, parser.Stack.ROLLBACK]
-        reverse = True if stack.action in reverse_actions else False
+        reverse = True if stack.action in reverse_actions or (
+                            stack.action, stack.status) == (
+                            parser.Stack.UPDATE, parser.Stack.GC_IN_PROGRESS) \
+                            else False
         db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
+        res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id,
+                                                    version)
         if stack.status == parser.Stack.FAILED:
             handle_failure()
         else:
             if res.status == resourcem.Resource.COMPLETE:
+                if (stack.status, res.action) == (parser.Stack.GC_IN_PROGRESS,
+                                                  resourcem.Resource.DELETE):
+                    db_api.resource_delete(cnxt, res.id)
+                    if res_latest.version == version:
+                        # In GC, if the latest version of an resource was deleted,
+                        # Delete edge from resource_graph
+                        db_api.resource_graph_delete_all_edges(cnxt,stack_id,
+                                                               res.name)
                 handle_success()
             else:
                 # Failure scenario

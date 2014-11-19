@@ -292,7 +292,7 @@ def resource_create(context, values):
 def resource_get_all_by_stack(context, stack_id, filters={}):
     query = model_query(context, models.Resource).filter_by(stack_id=stack_id)
     if filters:
-        query = filters.exact_filter(query, models.Resource, filters)
+        query = query.filter_by(**filters)
 
     results = query.options(orm.joinedload("data")).all()
     if not results:
@@ -1034,7 +1034,6 @@ def update_resource_traversal(context, stack_id, status, resource_name=None):
 
 
 def resource_graph_delete_all_edges(context, stack_id, resource_name):
-    from sqlalchemy import or_
     session = _session(context)
     with session.begin():
         session.query(models.ResourceGraph).\
@@ -1050,6 +1049,7 @@ def resource_delete(context, resource_id):
     session = Session.object_session(resource)
     session.delete(resource)
     session.flush()
+
 
 def get_all_resources_from_graph(context, stack_id):
     result = model_query(context, models.ResourceGraph.resource_name).filter_by(
