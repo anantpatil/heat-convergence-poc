@@ -637,15 +637,57 @@ class EngineService(service.Service):
         # code is ready.
         stack.rpc_client.notify_resource_observed(cnxt, stack_id, name, version)
 
+
+    def _get_stack_timeout_delta(self, stack):
+        if stack.action == parser.Stack.CREATE:
+            start_time = stack.created_at
+        elif stack.action == parser.Stack.DELETE:
+            # by default 60 mins
+            return 3600
+        else:
+            start_time = stack.updated_at
+        current_time = datetime.datetime.now().replace(microsecond=0)
+        delta = current_time - start_time
+        timeout = stack.timeout if stack.timeout else cfg.CONF.stack_action_timeout
+        delta_timeout = (timeout * 60) - delta.seconds
+        return delta_timeout
+
+    def _spin_wait_aquire_lock(self, cnxt, stack):
+        import time
+        timeout = self._get_stack_timeout_delta(stack)
+        lock = stack_lock.StackLock(cnxt, stack, self.engine_id)
+        start_time = datetime.datetime.now().replace(microsecond=0)
+        current_time = datetime.datetime.now().replace(microsecond=0)
+        while current_time - start_time <= datetime.timedelta(seconds=timeout):
+            acquired_lock = lock.try_acquire()
+            if acquired_lock is None:
+                return lock
+            else:
+                time.sleep(2)
+                current_time = datetime.datetime.now().replace(microsecond=0)
+        return
+
+    def _handle_stack_timeout(self, stack):
+        values = {
+            'status': parser.Stack.FAILED,
+            'status_reason': 'stack timed-out'
+        }
+        db_api.stack_update(stack.context, stack.id, values)
+
     @request_context
     def notify_resource_observed(self, cnxt, stack_id, name, version):
+        stack = db_api.stack_get(cnxt, stack_id)
+        lock = self._spin_wait_aquire_lock(cnxt, stack)
+        if lock:
+            self.thread_group_mgr.start_with_acquired_lock(
+                stack, lock,  self.handle_resource_notif, cnxt, name, stack, version)
+        else:
+            # stack timedout
+            self._handle_stack_timeout(stack)
+
+    def handle_resource_notif(self, cnxt, name, stack, version):
         def filter_nodes(nodes, status):
             return filter(lambda (res_name, res_status): res_status == status, nodes)
-
-        def get_stack_timeout_delta(stack_timeout):
-            delta = datetime.datetime.now().replace(microsecond=0) - stack_timeout
-            timeout = stack.timeout if stack.timeout else cfg.CONF.stack_action_timeout
-            return (timeout * 60) - delta.seconds
 
         def handle_failure():
             nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
@@ -668,13 +710,7 @@ class EngineService(service.Service):
                 pass
 
         def handle_success():
-            if stack.action == parser.Stack.CREATE:
-                delta_timeout = get_stack_timeout_delta(stack.created_at)
-            elif stack.action == parser.Stack.DELETE:
-                delta_timeout = None
-            else:
-                delta_timeout = get_stack_timeout_delta(stack.updated_at)
-
+            delta_timeout = self._get_stack_timeout_delta(stack)
             nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
             ready_nodes = filter_nodes(nodes, 'UNPROCESSED')
             if ready_nodes:
@@ -702,7 +738,7 @@ class EngineService(service.Service):
                     }
                     db_api.stack_update(cnxt, stack_id, data)
 
-        stack = db_api.stack_get(cnxt, stack_id)
+        stack_id = stack.id
         # check if a newer version of resource is available.
         res_latest = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id)
         if res_latest.version > version and \
@@ -712,7 +748,7 @@ class EngineService(service.Service):
             #TODO: change this logic
             parser.Stack.process_ready_resources(
                 cnxt, stack_id=stack_id,
-                timeout=get_stack_timeout_delta(stack.updated_at))
+                timeout=self.get_stack_timeout_delta(stack))
             return
         reverse_actions = [parser.Stack.DELETE, parser.Stack.ROLLBACK]
         reverse = True if stack.action in reverse_actions or (
