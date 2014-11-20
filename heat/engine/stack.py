@@ -907,10 +907,6 @@ class Stack(collections.Mapping):
                 #create_new_resource_version( old_res, res.DELETE)
                 res_obj = resource.Resource.load(old_res, self)
                 create_new_resource_version(res_obj, old_res, res_obj.DELETE)
-                if not self.disable_rollback:
-                    db_api.update_resource_traversal(self.context, self.id,
-                                                     status="PROCESSED",
-                                                     resource_name=res_obj.name)
             else:
                 if old_res:
                     old_rsrc_defn = rsrc_defn.ResourceDefinition.from_dict(
