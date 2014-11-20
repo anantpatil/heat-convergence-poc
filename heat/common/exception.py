@@ -129,6 +129,13 @@ class HeatException(Exception):
         return self.__class__(**self.kwargs)
 
 
+
+class AcquireLockFailed(HeatException):
+    msg_fmt = _("Failed to acquire lock: %(name)s")
+
+class ReleaseLockFailed(HeatException):
+    msg_fmt = _("Failed to release lock: %(name)s")
+
 class MissingCredentialError(HeatException):
     msg_fmt = _("Missing required credential: %(required)s")
 

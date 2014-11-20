@@ -124,7 +124,7 @@ class ThreadGroupManager(object):
                                                 self._serialize_profile_info(),
                                                 func, *args, **kwargs)
 
-    def start_with_lock(self, cnxt, stack, engine_id, func, *args, **kwargs):
+    def start_with_lock(self, cnxt, stack_id, engine_id, func, *args, **kwargs):
         """
         Try to acquire a stack lock and, if successful, run the given
         method in a sub-thread.  Release the lock when the thread
@@ -139,13 +139,13 @@ class ThreadGroupManager(object):
         :param args: Args to be passed to func
         :param kwargs: Keyword-args to be passed to func.
         """
-        lock = stack_lock.StackLock(cnxt, stack, engine_id)
-        with lock.thread_lock(stack.id):
-            th = self.start_with_acquired_lock(stack, lock,
+        lock = stack_lock.StackLock(cnxt, stack_id, engine_id)
+        with lock.thread_lock():
+            th = self.start_with_acquired_lock(stack_id, lock,
                                                func, *args, **kwargs)
             return th
 
-    def start_with_acquired_lock(self, stack, lock, func, *args, **kwargs):
+    def start_with_acquired_lock(self, stack_id, lock, func, *args, **kwargs):
         """
         Run the given method in a sub-thread and release the provided lock
         when the thread finishes.
@@ -164,10 +164,10 @@ class ThreadGroupManager(object):
             """
             Callback function that will be passed to GreenThread.link().
             """
-            lock.release(*args)
+            lock.release()
 
-        th = self.start(stack.id, func, *args, **kwargs)
-        th.link(release, stack.id)
+        th = self.start(stack_id, func, *args, **kwargs)
+        th.link(release, stack_id)
         return th
 
     def add_timer(self, stack_id, func, *args, **kwargs):
@@ -751,7 +751,11 @@ class EngineService(service.Service):
                             stack.action, stack.status) == (
                             parser.Stack.UPDATE, parser.Stack.GC_IN_PROGRESS) \
                             else False
-        db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
+
+        lock = stack_lock.StackLock(cnxt, stack_id, self.engine_id)
+        with lock.thread_lock():
+            db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
+
         res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id,
                                                     version)
         if stack.status == parser.Stack.FAILED:
@@ -773,7 +777,9 @@ class EngineService(service.Service):
                     'status': parser.Stack.FAILED,
                     'status_reason': res.status_reason
                 }
-                db_api.stack_update(cnxt, stack_id, values)
+                with lock.thread_lock():
+                    db_api.stack_update(cnxt, stack_id, values)
+
                 handle_failure()
 
     @request_context
@@ -828,7 +834,7 @@ class EngineService(service.Service):
 
         stack.store()
 
-        self.thread_group_mgr.start_with_lock(cnxt, stack, self.engine_id,
+        self.thread_group_mgr.start_with_lock(cnxt, stack.id, self.engine_id,
                                               _stack_create, stack)
 
         return dict(stack.identifier())

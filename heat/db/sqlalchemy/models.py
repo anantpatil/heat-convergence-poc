@@ -112,6 +112,15 @@ class RawTemplate(BASE, HeatBase):
                                     sqlalchemy.ForeignKey('raw_template.id'))
 
 
+class GenericLock(BASE):
+    """generic lock mechanism"""
+
+    __tablename__ = 'generic_lock'
+
+    name = sqlalchemy.Column(sqlalchemy.String(255), primary_key=True)
+    data = sqlalchemy.Column(sqlalchemy.String(255))
+
+
 class Stack(BASE, HeatBase, SoftDelete, StateAware):
     """Represents a stack created by the heat engine."""
 

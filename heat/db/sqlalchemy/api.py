@@ -491,6 +491,28 @@ def stack_delete_hard(context, stack_id):
     session.flush()
 
 
+def lock_create(context, name, data):
+    try:
+        session = get_session()
+        glock = models.GenericLock(name, data)
+        glock.save(_session(context))
+        return glock
+    except sqlalchemy.exc.IntegrityError:
+        return
+
+
+def lock_release(context, name):
+    session = _session(context)
+    session.query(models.GenericLockLock).\
+        filter_by(name=name).delete()
+
+
+def lock_steal(context, name, data):
+    session = _session(context)
+    session.query(models.GenericLockLock).\
+        filter_by(name=name).update({'data': data})
+
+
 def stack_lock_create(stack_id, engine_id):
     session = get_session()
     with session.begin():

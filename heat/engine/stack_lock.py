@@ -14,15 +14,14 @@
 import contextlib
 import uuid
 
+
 from oslo.config import cfg
 from oslo import messaging
 from oslo.utils import excutils
 
 from heat.common import exception
-from heat.common.i18n import _LI
-from heat.common.i18n import _LW
 from heat.common import messaging as rpc_messaging
-from heat.db import api as db_api
+from heat.engine import lock
 from heat.openstack.common import log as logging
 
 cfg.CONF.import_opt('engine_life_check_timeout', 'heat.common.config')
@@ -30,6 +29,77 @@ cfg.CONF.import_opt('engine_life_check_timeout', 'heat.common.config')
 LOG = logging.getLogger(__name__)
 
 
+def engine_alive(context, engine_id):
+    client = rpc_messaging.get_rpc_client(version='1.0', topic=engine_id)
+    client_context = client.prepare(
+        timeout=cfg.CONF.engine_life_check_timeout)
+    try:
+        return client_context.call(context, 'listening')
+    except messaging.MessagingTimeout:
+        return False
+
+
+def generate_engine_id():
+    return str(uuid.uuid4())
+
+
+class StackLock(lock.LockManager):
+    """Stack Lock"""
+    def __init__(self, context, stack_id, engine_id):
+        self.engine_id = engine_id
+        super(StackLock, self).__init__(context, stack_id, engine_id)
+
+    def try_steal(self):
+        if engine_alive(self.context, self.engine_id):
+            raise exception.ActionInProgress("")
+        self._steal()
+
+    @contextlib.contextmanager
+    def thread_lock(self):
+        """
+        Acquire a lock and release it only if there is an exception.  The
+        release method still needs to be scheduled to be run at the
+        end of the thread using the Thread.link method.
+        """
+        try:
+            self.acquire()
+            yield
+        except:  # noqa
+            with excutils.save_and_reraise_exception():
+                self.release()
+
+    @contextlib.contextmanager
+    def try_thread_lock(self, timeout=60):
+        """
+        Similar to thread_lock, but acquire the lock using try_acquire
+        and only release it upon any exception after a successful
+        acquisition.
+        """
+        result = None
+        try:
+            result = self.try_acquire(timeout)
+            yield result
+        except:  # noqa
+            if result is None:  # Lock was successfully acquired
+                with excutils.save_and_reraise_exception():
+                    self.release()
+            raise
+
+
+
+class ResourceLock(lock.LockManager):
+    """Resource Lock"""
+    def __init__(self, context, rsrc_name, stack_id, engine_id):
+        self.engine_id = engine_id
+        name = "%s_%s" % (stack_id, rsrc_name)
+        super(ResourceLock, self).__init__(context, name, engine_id)
+
+    def try_steal(self):
+        if engine_alive(self.context, self.engine_id):
+            raise exception.ActionInProgress("")
+        self._steal()
+
+'''
 class StackLock(object):
     def __init__(self, context, stack, engine_id):
         self.context = context
@@ -152,3 +222,4 @@ class StackLock(object):
                 with excutils.save_and_reraise_exception():
                     self.release(stack_id)
             raise
+'''
