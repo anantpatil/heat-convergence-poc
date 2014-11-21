@@ -652,8 +652,7 @@ class EngineService(service.Service):
         delta_timeout = (timeout * 60) - delta.seconds
         return delta_timeout
 
-    def _spin_wait_aquire_lock(self, cnxt, stack):
-        import time
+    def _spin_wait_acquire_lock(self, cnxt, stack):
         timeout = self._get_stack_timeout_delta(stack)
         lock = stack_lock.StackLock(cnxt, stack, self.engine_id)
         start_time = datetime.datetime.now().replace(microsecond=0)
@@ -663,7 +662,7 @@ class EngineService(service.Service):
             if acquired_lock is None:
                 return lock
             else:
-                time.sleep(2)
+                eventlet.sleep(0.2)
                 current_time = datetime.datetime.now().replace(microsecond=0)
         return
 
@@ -677,10 +676,11 @@ class EngineService(service.Service):
     @request_context
     def notify_resource_observed(self, cnxt, stack_id, name, version):
         stack = db_api.stack_get(cnxt, stack_id)
-        lock = self._spin_wait_aquire_lock(cnxt, stack)
+        lock = self._spin_wait_acquire_lock(cnxt, stack)
         if lock:
             self.thread_group_mgr.start_with_acquired_lock(
-                stack, lock,  self.handle_resource_notif, cnxt, name, stack, version)
+                stack, lock,  self.handle_resource_notif, cnxt, name, stack,
+                version)
         else:
             # stack timedout
             self._handle_stack_timeout(stack)
@@ -697,11 +697,7 @@ class EngineService(service.Service):
                 if (not stack.disable_rollback and
                         stack.action in (parser.Stack.CREATE, parser.Stack.UPDATE)):
                     current_stack = parser.Stack.load(cnxt, stack_id)
-                    lock = stack_lock.StackLock(cnxt,
-                                                current_stack,
-                                                self.engine_id)
-                    with lock.thread_lock(stack_id):
-                        current_stack.rollback()
+                    current_stack.rollback()
                 else:
                     # No rollback, Do nothing
                     pass
