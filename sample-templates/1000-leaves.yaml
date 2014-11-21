@@ -1,0 +1,7020 @@
+description: Random String templates
+
+heat_template_version: 2013-05-23
+
+parameters:
+  char_classes:
+    default:
+    - {class: hexdigits, min: 4}
+    type: string
+  len: {default: 16, type: string}
+  salt: {default: quickbrownfox, type: string}
+
+resources:
+  C:
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+
+  R-0:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-1:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-10:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-100:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-101:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-102:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-103:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-104:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-105:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-106:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-107:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-108:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-109:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-11:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-110:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-111:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-112:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-113:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-114:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-115:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-116:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-117:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-118:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-119:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-12:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-120:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-121:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-122:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-123:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-124:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-125:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-126:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-127:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-128:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-129:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-13:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-130:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-131:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-132:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-133:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-134:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-135:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-136:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-137:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-138:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-139:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-14:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-140:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-141:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-142:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-143:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-144:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-145:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-146:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-147:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-148:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-149:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-15:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-150:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-151:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-152:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-153:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-154:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-155:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-156:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-157:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-158:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-159:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-16:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-160:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-161:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-162:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-163:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-164:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-165:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-166:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-167:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-168:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-169:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-17:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-170:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-171:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-172:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-173:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-174:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-175:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-176:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-177:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-178:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-179:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-18:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-180:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-181:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-182:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-183:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-184:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-185:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-186:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-187:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-188:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-189:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-19:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-190:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-191:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-192:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-193:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-194:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-195:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-196:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-197:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-198:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-199:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-2:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-20:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-200:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-201:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-202:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-203:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-204:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-205:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-206:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-207:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-208:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-209:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-21:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-210:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-211:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-212:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-213:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-214:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-215:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-216:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-217:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-218:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-219:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-22:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-220:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-221:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-222:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-223:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-224:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-225:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-226:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-227:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-228:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-229:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-23:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-230:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-231:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-232:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-233:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-234:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-235:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-236:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-237:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-238:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-239:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-24:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-240:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-241:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-242:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-243:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-244:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-245:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-246:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-247:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-248:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-249:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-25:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-250:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-251:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-252:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-253:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-254:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-255:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-256:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-257:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-258:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-259:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-26:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-260:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-261:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-262:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-263:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-264:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-265:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-266:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-267:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-268:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-269:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-27:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-270:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-271:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-272:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-273:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-274:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-275:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-276:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-277:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-278:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-279:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-28:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-280:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-281:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-282:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-283:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-284:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-285:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-286:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-287:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-288:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-289:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-29:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-290:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-291:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-292:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-293:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-294:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-295:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-296:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-297:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-298:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-299:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-3:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-30:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-300:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-301:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-302:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-303:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-304:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-305:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-306:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-307:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-308:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-309:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-31:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-310:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-311:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-312:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-313:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-314:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-315:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-316:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-317:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-318:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-319:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-32:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-320:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-321:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-322:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-323:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-324:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-325:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-326:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-327:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-328:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-329:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-33:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-330:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-331:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-332:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-333:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-334:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-335:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-336:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-337:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-338:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-339:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-34:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-340:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-341:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-342:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-343:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-344:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-345:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-346:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-347:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-348:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-349:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-35:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-350:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-351:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-352:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-353:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-354:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-355:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-356:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-357:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-358:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-359:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-36:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-360:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-361:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-362:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-363:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-364:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-365:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-366:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-367:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-368:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-369:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-37:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-370:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-371:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-372:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-373:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-374:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-375:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-376:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-377:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-378:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-379:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-38:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-380:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-381:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-382:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-383:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-384:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-385:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-386:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-387:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-388:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-389:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-39:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-390:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-391:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-392:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-393:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-394:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-395:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-396:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-397:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-398:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-399:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-4:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-40:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-400:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-401:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-402:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-403:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-404:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-405:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-406:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-407:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-408:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-409:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-41:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-410:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-411:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-412:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-413:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-414:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-415:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-416:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-417:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-418:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-419:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-42:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-420:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-421:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-422:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-423:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-424:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-425:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-426:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-427:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-428:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-429:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-43:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-430:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-431:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-432:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-433:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-434:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-435:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-436:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-437:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-438:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-439:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-44:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-440:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-441:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-442:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-443:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-444:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-445:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-446:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-447:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-448:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-449:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-45:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-450:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-451:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-452:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-453:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-454:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-455:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-456:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-457:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-458:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-459:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-46:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-460:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-461:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-462:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-463:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-464:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-465:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-466:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-467:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-468:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-469:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-47:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-470:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-471:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-472:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-473:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-474:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-475:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-476:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-477:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-478:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-479:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-48:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-480:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-481:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-482:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-483:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-484:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-485:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-486:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-487:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-488:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-489:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-49:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-490:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-491:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-492:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-493:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-494:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-495:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-496:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-497:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-498:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-499:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-5:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-50:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-500:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-501:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-502:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-503:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-504:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-505:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-506:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-507:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-508:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-509:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-51:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-510:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-511:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-512:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-513:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-514:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-515:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-516:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-517:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-518:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-519:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-52:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-520:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-521:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-522:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-523:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-524:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-525:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-526:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-527:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-528:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-529:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-53:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-530:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-531:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-532:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-533:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-534:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-535:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-536:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-537:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-538:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-539:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-54:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-540:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-541:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-542:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-543:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-544:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-545:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-546:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-547:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-548:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-549:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-55:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-550:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-551:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-552:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-553:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-554:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-555:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-556:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-557:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-558:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-559:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-56:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-560:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-561:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-562:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-563:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-564:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-565:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-566:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-567:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-568:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-569:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-57:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-570:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-571:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-572:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-573:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-574:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-575:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-576:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-577:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-578:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-579:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-58:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-580:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-581:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-582:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-583:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-584:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-585:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-586:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-587:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-588:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-589:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-59:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-590:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-591:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-592:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-593:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-594:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-595:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-596:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-597:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-598:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-599:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-6:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-60:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-600:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-601:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-602:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-603:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-604:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-605:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-606:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-607:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-608:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-609:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-61:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-610:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-611:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-612:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-613:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-614:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-615:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-616:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-617:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-618:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-619:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-62:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-620:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-621:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-622:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-623:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-624:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-625:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-626:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-627:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-628:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-629:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-63:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-630:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-631:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-632:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-633:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-634:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-635:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-636:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-637:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-638:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-639:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-64:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-640:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-641:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-642:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-643:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-644:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-645:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-646:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-647:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-648:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-649:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-65:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-650:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-651:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-652:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-653:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-654:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-655:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-656:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-657:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-658:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-659:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-66:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-660:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-661:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-662:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-663:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-664:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-665:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-666:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-667:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-668:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-669:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-67:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-670:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-671:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-672:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-673:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-674:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-675:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-676:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-677:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-678:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-679:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-68:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-680:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-681:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-682:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-683:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-684:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-685:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-686:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-687:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-688:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-689:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-69:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-690:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-691:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-692:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-693:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-694:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-695:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-696:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-697:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-698:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-699:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-7:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-70:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-700:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-701:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-702:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-703:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-704:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-705:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-706:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-707:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-708:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-709:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-71:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-710:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-711:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-712:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-713:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-714:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-715:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-716:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-717:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-718:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-719:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-72:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-720:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-721:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-722:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-723:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-724:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-725:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-726:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-727:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-728:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-729:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-73:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-730:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-731:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-732:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-733:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-734:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-735:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-736:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-737:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-738:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-739:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-74:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-740:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-741:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-742:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-743:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-744:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-745:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-746:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-747:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-748:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-749:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-75:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-750:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-751:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-752:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-753:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-754:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-755:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-756:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-757:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-758:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-759:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-76:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-760:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-761:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-762:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-763:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-764:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-765:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-766:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-767:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-768:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-769:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-77:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-770:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-771:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-772:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-773:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-774:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-775:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-776:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-777:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-778:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-779:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-78:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-780:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-781:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-782:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-783:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-784:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-785:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-786:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-787:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-788:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-789:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-79:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-790:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-791:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-792:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-793:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-794:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-795:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-796:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-797:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-798:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-799:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-8:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-80:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-800:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-801:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-802:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-803:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-804:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-805:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-806:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-807:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-808:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-809:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-81:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-810:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-811:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-812:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-813:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-814:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-815:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-816:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-817:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-818:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-819:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-82:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-820:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-821:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-822:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-823:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-824:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-825:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-826:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-827:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-828:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-829:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-83:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-830:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-831:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-832:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-833:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-834:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-835:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-836:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-837:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-838:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-839:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-84:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-840:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-841:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-842:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-843:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-844:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-845:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-846:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-847:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-848:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-849:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-85:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-850:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-851:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-852:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-853:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-854:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-855:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-856:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-857:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-858:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-859:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-86:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-860:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-861:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-862:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-863:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-864:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-865:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-866:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-867:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-868:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-869:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-87:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-870:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-871:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-872:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-873:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-874:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-875:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-876:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-877:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-878:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-879:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-88:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-880:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-881:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-882:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-883:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-884:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-885:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-886:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-887:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-888:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-889:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-89:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-890:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-891:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-892:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-893:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-894:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-895:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-896:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-897:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-898:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-899:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-9:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-90:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-900:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-901:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-902:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-903:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-904:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-905:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-906:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-907:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-908:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-909:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-91:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-910:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-911:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-912:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-913:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-914:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-915:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-916:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-917:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-918:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-919:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-92:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-920:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-921:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-922:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-923:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-924:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-925:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-926:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-927:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-928:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-929:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-93:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-930:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-931:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-932:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-933:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-934:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-935:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-936:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-937:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-938:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-939:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-94:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-940:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-941:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-942:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-943:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-944:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-945:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-946:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-947:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-948:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-949:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-95:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-950:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-951:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-952:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-953:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-954:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-955:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-956:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-957:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-958:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-959:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-96:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-960:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-961:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-962:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-963:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-964:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-965:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-966:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-967:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-968:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-969:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-97:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-970:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-971:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-972:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-973:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-974:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-975:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-976:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-977:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-978:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-979:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-98:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-980:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-981:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-982:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-983:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-984:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-985:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-986:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-987:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-988:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-989:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-99:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-990:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-991:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-992:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-993:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-994:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-995:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-996:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-997:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-998:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
+  R-999:
+    depends_on: C
+    properties:
+      character_classes: {get_param: char_classes}
+      length: {get_param: len}
+      salt: {get_param: salt}
+    type: OS::Heat::RandomString
