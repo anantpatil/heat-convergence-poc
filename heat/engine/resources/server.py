@@ -351,8 +351,8 @@ class Server(stack_user.StackUser):
 
     default_client_name = 'nova'
 
-    def __init__(self, name, json_snippet, stack):
-        super(Server, self).__init__(name, json_snippet, stack)
+    def __init__(self, name, json_snippet, stack, load_from_db=False):
+        super(Server, self).__init__(name, json_snippet, stack, load_from_db=load_from_db)
         if self.user_data_software_config():
             self._register_access_key()
 
