@@ -283,9 +283,23 @@ class Port(neutron.NeutronResource):
         return self.neutron().show_port(
             self.resource_id)['port']
 
-    def check_create_complete(self, *args):
-        attributes = self._show_resource()
-        return self.is_built(attributes)
+    def do_get_desired_state(self):
+        if self.action == self.DELETE:
+            status = 'DOES_NOT_EXIST'
+        elif self.action in (self.CREATE, self.UPDATE):
+            status = ('ACTIVE', 'DOWN')
+        else:
+            return {}
+        return {'status': status}
+
+    def do_get_current_state(self):
+        try:
+            attributes = self._show_resource()
+            status = attributes['status']
+        except Exception as ex:
+            self.client_plugin().ignore_not_found(ex)
+            status = 'DOES_NOT_EXIST'
+        return {'status': status}
 
     def handle_delete(self):
         client = self.neutron()
@@ -327,10 +341,6 @@ class Port(neutron.NeutronResource):
         self._prepare_port_properties(props, prepare_for_update=True)
         LOG.debug('updating port with %s' % props)
         self.neutron().update_port(self.resource_id, {'port': props})
-
-    def check_update_complete(self, *args):
-        attributes = self._show_resource()
-        return self.is_built(attributes)
 
 
 def resource_mapping():

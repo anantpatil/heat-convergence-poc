@@ -50,6 +50,7 @@ from heat.engine import stack as parser
 from heat.engine import stack_lock
 from heat.engine import template as templatem
 from heat.engine import watchrule
+from heat.observer import observer
 from heat.openstack.common import log as logging
 from heat.openstack.common import service
 from heat.openstack.common import threadgroup
@@ -379,6 +380,7 @@ class EngineService(service.Service):
                           'Please keep the same if you do not want to '
                           'delegate subset roles when upgrading.',
                           Warning)
+        self.observer = observer.Observer()
 
     def create_periodic_tasks(self):
         LOG.debug("Starting periodic watch tasks pid=%s" % os.getpid())
@@ -626,17 +628,32 @@ class EngineService(service.Service):
     @request_context
     def converge_resource(self, cnxt, stack_id, name, version, timeout):
         stack = parser.Stack.load(cnxt, stack_id)
-        # TODO remove check_create_complete from resource_action
+        db_rsrc = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id,
+                                                        version)
         try:
-            stack.resource_action_runner(name, version, timeout)
+            stack.resource_action_runner(db_rsrc, timeout)
         except Exception as e:
             stack.state_set(stack.action, stack.FAILED, e.args[0] if e.args
                             else 'Failed stack pre-ops: %s' % six.text_type(e))
-        # notify Engine to converge
-        # TODO notify observer to check_create_complete once observer 
-        # code is ready.
-        stack.rpc_client.notify_resource_observed(cnxt, stack_id, name, version)
+            # avoid an extra RPC loop to observer, notify worker directly.
+            stack.rpc_client.notify_resource_observed(cnxt, stack.id, name,
+                                                      version)
+        else:
+            # Request observer to observe-and-notify the resource status.
+            stack.rpc_client.observe_resource(cnxt, db_rsrc.id)
 
+    @request_context
+    def observe_resource(self, cnxt, resource_id):
+        '''
+        Wrapper to the Observer observe_resource method (which will fetch the
+        current status of resource and update its status depending on whether
+        the current status matches the desired state).
+        :param cnxt: request context
+        :param resource_id: resource identifier
+        :param timeout: resource action timeout
+        :return: None
+        '''
+        self.observer.observe_resource(cnxt, resource_id)
 
     def _get_stack_timeout_delta(self, stack):
         if stack.action == parser.Stack.CREATE:

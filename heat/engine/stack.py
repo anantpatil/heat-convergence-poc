@@ -646,6 +646,19 @@ class Stack(collections.Mapping):
 
         return self.timeout_mins * 60
 
+    def get_timeout_delta(self):
+        if self.action == self.CREATE:
+            start_time = self.created_time
+        elif self.action == self.DELETE:
+            # by default 60 mins
+            return 3600
+        else:
+            start_time = self.updated_time
+        current_time = datetime.utcnow().replace(microsecond=0)
+        delta = current_time - start_time
+        delta_timeout = self.timeout_secs() - delta.seconds
+        return delta_timeout
+
     def preview_resources(self):
         '''
         Preview the stack with all of the resources.
@@ -760,12 +773,12 @@ class Stack(collections.Mapping):
             rc.notify_resource_observed(cnxt, stack_id, rsrc.name, rsrc.version)
             return
 
-    def resource_action_runner(self, resource_name, version, timeout):
-        db_rsrc = db_api.resource_get_by_name_and_stack(self.context,
-                                                        resource_name,
-                                                        self.id,
-                                                        version)
-        LOG.debug("=====Resource name %s, version %s", resource_name, version)
+    def resource_action_runner(self, db_rsrc, timeout):
+        #db_rsrc = db_api.resource_get_by_name_and_stack(self.context,
+        #                                                resource_name,
+        #                                                self.id,
+        #                                                version)
+        LOG.debug("=====Resource name %s, version %s", db_rsrc.name, db_rsrc.version)
         rsrc = resource.Resource.load(db_rsrc, self)
         action_task = scheduler.TaskRunner(
                             self.resource_action,

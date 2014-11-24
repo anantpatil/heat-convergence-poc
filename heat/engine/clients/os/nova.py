@@ -303,29 +303,6 @@ echo -e '%s\tALL=(ALL)\tNOPASSWD: ALL' >> /etc/sudoers
             self.ignore_not_found(exc)
             return
 
-        while True:
-            yield
-
-            try:
-                self.refresh_server(server)
-            except Exception as exc:
-                self.ignore_not_found(exc)
-                break
-            else:
-                # Some clouds append extra (STATUS) strings to the status
-                short_server_status = server.status.split('(')[0]
-                if short_server_status in ("DELETED", "SOFT_DELETED"):
-                    break
-                if short_server_status == "ERROR":
-                    fault = getattr(server, 'fault', {})
-                    message = fault.get('message', 'Unknown')
-                    code = fault.get('code')
-                    errmsg = (_("Server %(name)s delete failed: (%(code)s) "
-                                "%(message)s"))
-                    raise exception.Error(errmsg % {"name": server.name,
-                                                    "code": code,
-                                                    "message": message})
-
     @scheduler.wrappertask
     def resize(self, server, flavor, flavor_id):
         """Resize the server and then call check_resize task to verify."""

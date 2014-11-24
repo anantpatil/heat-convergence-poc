@@ -553,9 +553,6 @@ class Server(stack_user.StackUser):
 
         return server
 
-    def check_create_complete(self, server):
-        return self._check_active(server)
-
     def _check_active(self, server):
         cp = self.client_plugin()
         status = cp.get_status(server)
@@ -1136,6 +1133,59 @@ class Server(stack_user.StackUser):
             if value is not None)
         props[self.IMAGE] = image_id
         return defn.freeze(properties=props)
+
+    def _get_desired_state_properties(self):
+        desired_states = list(self.DESIRED_STATE)
+        if self.action != self.DELETE:
+            desired_states.append(self.FLAVOR)
+            desired_states.append(self.IMAGE)
+        return desired_states
+
+    def do_get_desired_state(self):
+        '''
+        Return the desired status based on the action.
+        :returns: dict containing map of property name and the corresponding
+        desired value.
+        '''
+        action_status_map = {
+            'CREATE': 'ACTIVE',
+            'UPDATE': 'ACTIVE',
+            'DELETE': 'DOES_NOT_EXIST'
+        }
+        desired_state = {}
+        for item in self._get_desired_state_properties():
+            if item == self.STATUS:
+                desired_state[item] = action_status_map[self.action]
+            elif item == self.IMAGE:
+                desired_state[item] = self.client_plugin('glance').\
+                    get_image_id(self.properties[self.IMAGE])
+            elif item == self.FLAVOR:
+                desired_state[item] = self.client_plugin().\
+                    get_flavor_id(self.properties[self.FLAVOR])
+        return desired_state
+
+    def do_get_current_state(self):
+        '''
+        Fetch the current state of server.
+        :returns: dict containing map of property name and the actual value.
+        '''
+        current_state = {}
+        try:
+            server = self.nova().servers.get(self.resource_id)
+        except Exception as ex:
+            self.client_plugin().ignore_not_found(ex)
+            current_state[self.STATUS] = 'DOES_NOT_EXIST'
+        else:
+            for item in self._get_desired_state_properties():
+                if item == self.STATUS:
+                    status = self.client_plugin().get_status(server)
+                    if status in ('DELETED', 'SOFT_DELETED'):
+                        current_state[item] = 'DOES_NOT_EXIST'
+                    else:
+                        current_state[item] = status
+                else:
+                    current_state[item] = getattr(server, item)['id']
+        return current_state
 
 
 class FlavorConstraint(constraints.BaseCustomConstraint):

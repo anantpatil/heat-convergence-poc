@@ -85,6 +85,9 @@ class Resource(object):
     STATUSES = (INIT, IN_PROGRESS, FAILED, COMPLETE
                 ) = ('INIT', 'IN_PROGRESS', 'FAILED', 'COMPLETE')
 
+    # the string (eg. status) should match the resource attribute.
+    DESIRED_STATE = (STATUS, ) = ('status', )
+
     # If True, this resource must be created before it can be referenced.
     strict_dependency = True
 
@@ -481,8 +484,10 @@ class Resource(object):
                     self.state_set(action, self.FAILED, '%s aborted' % action)
                 except Exception:
                     LOG.exception(_('Error marking resource as failed'))
-        else:
-            self.state_set(action, self.COMPLETE)
+        # NOTE(UG): resource action COMPLETE will be marked by observer only;
+        # upon finding the observed state matching the desired state.
+        #else:
+            #self.state_set(action, self.COMPLETE)
 
     def action_handler_task(self, action, args=[], action_prefix=None):
         '''
@@ -1213,3 +1218,31 @@ class Resource(object):
             return False
         else:
             return True
+
+    def _get_default_state(self):
+        desired_state = {}
+        for item in self.DESIRED_STATE:
+            if item == self.STATUS:
+                desired_state[item] = self.COMPLETE
+        return desired_state
+
+    def get_desired_state(self):
+        '''
+        Resources which need to consider additional fields should implement
+        do_get_desired_state method and return a map of the parameters that
+        determine the state of the resource.
+        :returns: dict containing map of property name and the corresponding
+        desired value.
+        '''
+        fetcher = getattr(self, 'do_get_desired_state', None)
+        return fetcher() if fetcher else self._get_default_state()
+
+    def get_current_state(self):
+        '''
+        Resources which need to check additional fields should implement
+        do_get_current_state method and return the map/dict corresponding to
+        the desired_state of the resource.
+        :returns: dict containing map of property name and the actual value.
+        '''
+        fetcher = getattr(self, 'do_get_current_state', None)
+        return fetcher() if fetcher else self._get_default_state()

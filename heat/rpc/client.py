@@ -537,3 +537,7 @@ class EngineClient(object):
                                              stack_id=stack_id,
                                              name=name,
                                              version=version))
+
+    def observe_resource(self, cnxt, resource_id):
+        return self.cast(cnxt, self.make_msg('observe_resource',
+                                             resource_id=resource_id))
