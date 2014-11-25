@@ -98,7 +98,7 @@ class Template(collections.Mapping):
 
         return super(Template, cls).__new__(TemplateClass)
 
-    def __init__(self, template, template_id=None, files=None, env=None):
+    def __init__(self, template, template_id=None, files=None, env=None, predecessor=None):
         '''
         Initialise the template with a JSON object and a set of Parameters
         '''
@@ -108,7 +108,7 @@ class Template(collections.Mapping):
         self.maps = self[self.MAPPINGS]
         self.env = env or environment.Environment({})
         self.version = get_version(self.t, _template_classes.keys())
-        self.predecessor = None
+        self.predecessor = predecessor
 
     def __deepcopy__(self, memo):
         return Template(copy.deepcopy(self.t, memo), files=self.files)
@@ -120,7 +120,7 @@ class Template(collections.Mapping):
             t = db_api.raw_template_get(context, template_id)
         env = environment.Environment(t.environment)
         return cls(t.template, template_id=template_id, files=t.files,
-                   env=env)
+                   env=env, predecessor=t.predecessor)
 
     def store(self, context=None):
         '''Store the Template in the database and return its ID.'''

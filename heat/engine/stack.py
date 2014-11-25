@@ -880,8 +880,19 @@ class Stack(collections.Mapping):
         # Mark all nodes as UNPROCESSED
         db_api.update_resource_traversal(self.context, newstack.id,
                                          status="UNPROCESSED")
-        
-        def create_new_resource_version(new_res_obj, old_res, action):
+
+        def create_delete_version(res):
+            t = rsrc_defn.ResourceDefinition(res.name, res.t.resource_type)
+            del_res = resource.Resource(res.name, t, self, version=res.version + 1)
+            del_res.action = res.DELETE
+            del_res.status = res.INIT
+            del_res.resource_id = res.resource_id
+            del_res.store()
+
+            res.resource_id = None
+            res.store_update(res.action, res.status, "Removed physical id for deletion")
+
+        def create_new_resource_version(new_res_obj, db_res, action):
             new_res_obj.id = None
             new_res_obj.action = action
             new_res_obj.status = new_res_obj.INIT
@@ -889,7 +900,7 @@ class Stack(collections.Mapping):
             new_res_obj.version = old_res.version + 1
             new_res_obj.store()
 
-            old_res_obj = resource.Resource.load(old_res, self)
+            old_res_obj = resource.Resource.load(db_res, self)
             old_res_obj.resource_id = None
             old_res_obj.store_update(old_res_obj.action,
                                      old_res_obj.status,
@@ -905,8 +916,9 @@ class Stack(collections.Mapping):
             except KeyError:
                 #Resource does not exists in new template therefore it is deleted
                 #create_new_resource_version( old_res, res.DELETE)
-                res_obj = resource.Resource.load(old_res, self)
-                create_new_resource_version(res_obj, old_res, res_obj.DELETE)
+                if old_res:
+                    res_obj = resource.Resource.load(old_res, self)
+                    create_delete_version(res_obj)
             else:
                 if old_res:
                     old_rsrc_defn = rsrc_defn.ResourceDefinition.from_dict(
@@ -923,7 +935,8 @@ class Stack(collections.Mapping):
         Stack.process_ready_resources(self.context, stack_id=self.id, timeout=self.timeout_secs())
 
     def pre_update_complete(self):
-        self.state_set(self.UPDATE, self.GC_IN_PROGRESS, "Stack GC started")
+        self.state_set(self.action, self.GC_IN_PROGRESS,
+                       "%s GC started" % self.action)
         for rsrc_name in db_api.get_all_resources_from_graph(self.context,
                                                              self.id):
                 db_resources = db_api.\
@@ -1068,12 +1081,14 @@ class Stack(collections.Mapping):
 
         self.state_set(action, self.IN_PROGRESS, 'Stack %s started' %
                        action)
-        for res in self.resources.values():
-            db_res = db_api.resource_get_by_name_and_stack(self.context,
-                                                           res.name,
-                                                           self.id)
-            res_obj = resource.Resource.load(db_res, self)
-            res_obj.state_set(res_obj.DELETE, res_obj.INIT)
+
+        for res_name in db_api.get_all_resources_from_graph(self.context, self.id):
+            db_res = db_api.resource_get_by_name_and_stack(context=self.context,
+                                                            resource_name=res_name,
+                                                            stack_id=self.id)
+            if db_res:
+                res_obj = resource.Resource.load(db_res, self)
+                res_obj.state_set(res_obj.DELETE, res_obj.INIT)
 
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.id,
@@ -1351,11 +1366,11 @@ class Stack(collections.Mapping):
     def rollback(self):
         if self.t.predecessor:
             raw_template = Template.load(self.context,
-                                         self.t.predecessor_id)
+                                         self.t.predecessor)
         else:
             # NOTE: update with an empty template to DELETE the stack.
             empty_template = {'heat_template_version': self.t.version[1]}
             raw_template = Template(empty_template)
 
-        new_stack = Stack(self.context, self.name, raw_template, self.env)
+        new_stack = Stack(self.context, self.name, raw_template)
         self.update(new_stack, action=self.ROLLBACK)

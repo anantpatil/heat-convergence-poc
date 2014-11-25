@@ -164,6 +164,7 @@ class ThreadGroupManager(object):
             """
             Callback function that will be passed to GreenThread.link().
             """
+            LOG.debug("==== Realising the lock")
             lock.release(*args)
 
         th = self.start(stack.id, func, *args, **kwargs)
@@ -662,6 +663,7 @@ class EngineService(service.Service):
             if acquired_lock is None:
                 return lock
             else:
+                LOG.debug("==== Spin waiting for lock...")
                 eventlet.sleep(0.2)
                 current_time = datetime.datetime.now().replace(microsecond=0)
         return
@@ -723,8 +725,9 @@ class EngineService(service.Service):
                 stack_obj = parser.Stack.load(cnxt, stack_id)
                 if stack.action == parser.Stack.DELETE:
                     stack_obj.delete_complete()
-                elif stack.action == parser.Stack.UPDATE and \
-                                stack.status != parser.Stack.GC_IN_PROGRESS:
+                elif stack.action in (parser.Stack.UPDATE, parser.Stack.ROLLBACK) and \
+                                stack.status == parser.Stack.IN_PROGRESS:
+                    # ROLLBACK is also update
                     stack_obj.pre_update_complete()
                 else:
                     data = {
