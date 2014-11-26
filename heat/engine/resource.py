@@ -948,7 +948,6 @@ class Resource(object):
 
     def _store(self):
         '''Create the resource in the database.'''
-        LOG.info("==== storing the new resource")
         metadata = self.metadata_get()
         rsrc_defn_json = json.dumps(dict(self.frozen_definition()))
         try:
@@ -981,13 +980,11 @@ class Resource(object):
         ev.store()
 
     def _store_or_update(self, action, status, reason):
-        LOG.info("==== inside state_or_update")
         self.action = action
         self.status = status
         self.status_reason = reason
         rsrc_defn_json = json.dumps(dict(self.frozen_definition()))
         if self.id is not None:
-            LOG.info("==== Update resource with id %s", self.id)
             try:
                 rs = db_api.resource_get(self.context, self.id)
                 rs.update_and_save({
@@ -1032,7 +1029,6 @@ class Resource(object):
         self.status = self.COMPLETE
 
     def state_set(self, action, status, reason="state changed"):
-        LOG.info("==== in set_state")
         if action not in self.ACTIONS:
             raise ValueError(_("Invalid action %s") % action)
 
@@ -1043,7 +1039,6 @@ class Resource(object):
         new_state = (action, status)
         self._store_or_update(action, status, reason)
 
-        LOG.info("==== resource stored")
 
         if new_state != old_state:
             self._add_event(action, status, reason)

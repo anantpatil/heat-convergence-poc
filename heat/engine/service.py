@@ -164,7 +164,6 @@ class ThreadGroupManager(object):
             """
             Callback function that will be passed to GreenThread.link().
             """
-            LOG.debug("==== Realising the lock")
             lock.release(*args)
 
         th = self.start(stack.id, func, *args, **kwargs)
@@ -663,7 +662,6 @@ class EngineService(service.Service):
             if acquired_lock is None:
                 return lock
             else:
-                LOG.debug("==== Spin waiting for lock...")
                 eventlet.sleep(0.2)
                 current_time = datetime.datetime.now().replace(microsecond=0)
         return
