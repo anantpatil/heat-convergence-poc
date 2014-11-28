@@ -837,20 +837,9 @@ class Stack(collections.Mapping):
         newstack.store()
         
         db_api.update_resource_traversal(self.context, newstack.id,
-                                         status="UNPROCESSED")
-
-        def create_delete_version(res):
-            t = rsrc_defn.ResourceDefinition(res.name, res.t.resource_type)
-            del_res = resource.Resource(res.name, t, self, version=res.version + 1)
-            del_res.action = res.DELETE
-            del_res.status = res.INIT
-            del_res.resource_id = res.resource_id
-            del_res.store()
-
-            res.resource_id = None
-            res.store_update(res.action, res.status, "Removed physical id for deletion")
-
-        def create_new_resource_version(new_res_obj, db_res, action):
+                                         traversed=False)
+        
+        def create_new_resource_version(new_res_obj, old_res, action):
             new_res_obj.id = None
             new_res_obj.action = action
             new_res_obj.status = new_res_obj.INIT
@@ -910,6 +899,117 @@ class Stack(collections.Mapping):
 
         Stack.process_ready_resources(self.context, self.id, reverse=True)
 
+    @scheduler.wrappertask
+    def update_task(self, oldstack, action=UPDATE, event=None):
+        if action not in (self.UPDATE, self.ROLLBACK, self.RESTORE):
+            LOG.error(_LE("Unexpected action %s passed to update!"), action)
+            self.state_set(self.UPDATE, self.FAILED,
+                           "Invalid action %s" % action)
+            return
+
+        try:
+            lifecycle_plugin_utils.do_pre_ops(self.context, oldstack,
+                                              self, action)
+        except Exception as e:
+            self.state_set(action, self.FAILED, e.args[0] if e.args else
+                           'Failed stack pre-ops: %s' % six.text_type(e))
+            return
+        if self.status == self.IN_PROGRESS:
+            if action == self.ROLLBACK:
+                LOG.debug("Starting update rollback for %s" % self.name)
+            else:
+                self.state_set(action, self.FAILED,
+                               'State invalid for %s' % action)
+                return
+
+        self.state_set(action, self.IN_PROGRESS,
+                       'Stack %s started' % action)
+
+        old_template_id = self.t.predecessor
+
+        try:
+            # 3. traverse the graph and update
+            # 4. deletion phase for resources
+            # 5. Clean up old raw_template
+            # self.timeout_mins = oldstack.timeout_mins
+            self._set_param_stackid()
+
+            # mark the graph as not traversed
+            db_api.update_resource_traversal(self.context, self.id,
+                                             traversed=False)
+
+            update_task = update.StackUpdate(self,
+                                             rollback=action == self.ROLLBACK,
+                                             error_wait_time=ERROR_WAIT_TIME)
+            updater = scheduler.TaskRunner(update_task)
+
+            try:
+                updater.start(timeout=self.timeout_secs())
+                yield
+                while not updater.step():
+                    if event is None or not event.ready():
+                        yield
+                    else:
+                        message = event.wait()
+                        if message == rpc_api.THREAD_CANCEL:
+                            raise ForcedCancel()
+            finally:
+                self.reset_dependencies()
+
+            if action == self.UPDATE:
+                reason = 'Stack successfully updated'
+            elif action == self.RESTORE:
+                reason = 'Stack successfully restored'
+            else:
+                reason = 'Stack rollback completed'
+            stack_status = self.COMPLETE
+
+        except scheduler.Timeout:
+            stack_status = self.FAILED
+            reason = 'Timed out'
+        except ForcedCancel as e:
+            reason = six.text_type(e)
+
+            stack_status = self.FAILED
+            if action == self.UPDATE:
+                update_task.updater.cancel_all()
+                yield self.update_task(oldstack, action=self.ROLLBACK)
+                return
+
+        except exception.ResourceFailure as e:
+            reason = six.text_type(e)
+
+            stack_status = self.FAILED
+            if action == self.UPDATE:
+                # If rollback is enabled, we do another update, with the
+                # existing template, so we roll back to the original state
+                if not self.disable_rollback:
+                    yield oldstack.update_task(None, action=self.ROLLBACK)
+                    return
+        else:
+            # flip the template to the newstack values
+            #self.t = newstack.t
+            template_outputs = self.t[self.t.OUTPUTS]
+            self.outputs = self.resolve_static_data(template_outputs)
+            self.t.predecessor = None
+            self.t.store()
+
+            LOG.debug('Deleting old template')
+            db_api.raw_template_delete(self.context, old_template_id)
+
+        # Don't use state_set to do only one update query and avoid race
+        # condition with the COMPLETE status
+        self.action = action
+        self.status = stack_status
+        self.status_reason = reason
+
+        self.store()
+        lifecycle_plugin_utils.do_post_ops(self.context, oldstack,
+                                           self, action,
+                                           (self.status == self.FAILED))
+
+        notification.send(self)
+
     @profiler.trace('Stack.delete', hide_args=False)
     def delete_start(self, action=DELETE, backup=False, abandon=False):
         '''
@@ -931,11 +1031,10 @@ class Stack(collections.Mapping):
 
         self.state_set(action, self.IN_PROGRESS, 'Stack %s started' %
                        action)
-
-        for res_name in db_api.get_all_resources_from_graph(self.context, self.id):
-            db_res = db_api.resource_get_by_name_and_stack(context=self.context,
-                                                            resource_name=res_name,
-                                                            stack_id=self.id)
+        for res in self.resources.values():
+            db_res = db_api.resource_get_by_name_and_stack(self.context,
+                                                           res.name,
+                                                           self.id)
             if db_res:
                 res_obj = resource.Resource.load(db_res, self)
                 res_obj.state_set(res_obj.DELETE, res_obj.INIT)
