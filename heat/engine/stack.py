@@ -43,7 +43,6 @@ from heat.engine import resources
 from heat.engine import rsrc_defn
 from heat.engine import scheduler
 from heat.engine.template import Template
-from heat.engine import update
 from heat.openstack.common import log as logging
 from heat.rpc import api as rpc_api
 from heat.rpc import client as rpc_client
