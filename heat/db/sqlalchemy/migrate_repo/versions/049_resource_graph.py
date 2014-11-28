@@ -13,6 +13,7 @@
 
 import sqlalchemy
 
+
 def upgrade(migrate_engine):
     meta = sqlalchemy.MetaData()
     meta.bind = migrate_engine
@@ -26,7 +27,7 @@ def upgrade(migrate_engine):
         sqlalchemy.Column('stack_id', sqlalchemy.String(36),
                           sqlalchemy.ForeignKey('stack.id'),
                           primary_key=True, nullable=False),
-        sqlalchemy.Column('status', sqlalchemy.String(36)),
+        sqlalchemy.Column('traversed', sqlalchemy.Boolean),
         sqlalchemy.Column('created_at', sqlalchemy.DateTime),
         sqlalchemy.Column('updated_at', sqlalchemy.DateTime),
         mysql_engine='InnoDB',
@@ -34,6 +35,7 @@ def upgrade(migrate_engine):
     )
     sqlalchemy.Table('stack', meta, autoload=True)
     resource_graph.create()
+
 
 def downgrade(migrate_engine):
     meta = sqlalchemy.MetaData()
