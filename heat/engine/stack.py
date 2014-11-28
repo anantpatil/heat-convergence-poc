@@ -269,42 +269,20 @@ class Stack(collections.Mapping):
     def process_ready_resources(cls, cnxt, stack_id, ready_nodes=[],
                                 reverse=False, timeout=None):
         if not ready_nodes:
-            ready_nodes = db_api.get_ready_nodes(context=cnxt,
-                                           stack_id=stack_id,
-                                           reverse=reverse)
-        def converge_resource(rsrc_name):
-            db_api.update_resource_traversal(context=cnxt,
-                                             stack_id=stack_id,
-                                             status='PROCESSING',
-                                             resource_name=rsrc_name)
-            version = Stack.get_converge_resource_version(cnxt, rsrc_name,
+            ready_nodes = db_api.get_ready_nodes(
+                context=cnxt, stack_id=stack_id, reverse=reverse)
+
+        def converge_resource(res_name):
+            version = Stack.get_converge_resource_version(cnxt, res_name,
                                                           stack_id)
 
             rc = rpc_client.EngineClient()
             if version is not None:
-                rc.converge_resource(cnxt, stack_id, rsrc_name, version=version,
+                db_api.resource_set_state(cnxt, res_name, version, stack_id, status=resource.Resource.SCHEDULED)
+                rc.converge_resource(cnxt, stack_id, res_name, version=version,
                                      timeout=timeout)
 
-        def filter_in_progress_nodes():
-            # to avoid processing a resource which is IN_PROGRESS,
-            # return only those resources which are not in IN_PROGRESS.
-            node_dict = dict(ready_nodes)
-            filters = {'status': resource.Resource.IN_PROGRESS}
-            try:
-                resources = db_api.resource_get_all_by_stack(cnxt,
-                                                             stack_id,
-                                                             filters)
-            except exception.NotFound:
-                return ready_nodes
-            nodes = [(name, status)
-                     for name, status in ready_nodes
-                     if name not in resources
-            ]
-            return nodes
-
-        ready_nodes = filter_in_progress_nodes()
-        [converge_resource(rsrc_name) for rsrc_name, status in ready_nodes
-                                                if status == 'UNPROCESSED']
+        [converge_resource(rsrc_name) for rsrc_name in ready_nodes]
 
     def reset_dependencies(self):
         self._dependencies = None
@@ -689,7 +667,7 @@ class Stack(collections.Mapping):
         if self.action != self.CREATE:
             db_api.update_resource_traversal(context=self.context,
                                              stack_id=self.id,
-                                             status="UNPROCESSED")
+                                             traversed=False)
 
         stack_status = self.COMPLETE
         reason = 'Stack %s completed successfully' % action
@@ -858,7 +836,6 @@ class Stack(collections.Mapping):
         newstack.updated_time = datetime.utcnow()
         newstack.store()
         
-        # Mark all nodes as UNPROCESSED
         db_api.update_resource_traversal(self.context, newstack.id,
                                          status="UNPROCESSED")
 
@@ -912,7 +889,7 @@ class Stack(collections.Mapping):
                         create_new_resource_version(new_res, old_res, new_res.UPDATE)
                     else:
                         db_api.update_resource_traversal(self.context, self.id,
-                                                         status="PROCESSED",
+                                                         traversed=True,
                                                          resource_name=new_res.name)
                 else:
                     new_res.state_set(new_res.CREATE, new_res.INIT)
@@ -928,7 +905,7 @@ class Stack(collections.Mapping):
                     self.context, rsrc_name, self.id)
                 if len(db_resources) > 1:
                     db_api.update_resource_traversal(self.context, self.id,
-                                                     status="UNPROCESSED",
+                                                     traversed=False,
                                                      resource_name=rsrc_name)
 
         Stack.process_ready_resources(self.context, self.id, reverse=True)
@@ -965,7 +942,7 @@ class Stack(collections.Mapping):
 
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.id,
-                                         status="UNPROCESSED")
+                                         traversed=False)
 
         snapshots = db_api.snapshot_get_all(self.context, self.id)
         for snapshot in snapshots:

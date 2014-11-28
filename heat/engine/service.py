@@ -686,23 +686,17 @@ class EngineService(service.Service):
             self._handle_stack_timeout(stack)
 
     def handle_resource_notif(self, cnxt, name, stack, version):
-        def filter_nodes(nodes, status):
-            return filter(lambda (res_name, res_status): res_status == status, nodes)
+        def all_edges_are_traversed():
+            return not db_api.get_untraversed_edges(cnxt, stack_id)
 
         def handle_failure():
-            nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
-            processing_nodes = filter_nodes(nodes, 'PROCESSING')
-            if not processing_nodes:
-                # Rollback = True and action is CREATE/UPDATE
-                if (not stack.disable_rollback and
-                        stack.action in (parser.Stack.CREATE, parser.Stack.UPDATE)):
-                    current_stack = parser.Stack.load(cnxt, stack_id)
-                    current_stack.rollback()
-                else:
-                    # No rollback, Do nothing
-                    pass
+            # Rollback = True and action is CREATE/UPDATE
+            if (not stack.disable_rollback and
+                    stack.action in (parser.Stack.CREATE, parser.Stack.UPDATE)):
+                current_stack = parser.Stack.load(cnxt, stack_id)
+                current_stack.rollback()
             else:
-                # Ignore notification. Wait for others to complete
+                # No rollback, Do nothing
                 pass
 
         def handle_success():
@@ -710,18 +704,16 @@ class EngineService(service.Service):
                 # some earlier event marked this as failed, don't proceed
                 return
             delta_timeout = self._get_stack_timeout_delta(stack)
-            nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
-            ready_nodes = filter_nodes(nodes, 'UNPROCESSED')
+            ready_nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
             if ready_nodes:
                 parser.Stack.process_ready_resources(cnxt, stack_id,
                                                      ready_nodes,
                                                      reverse=reverse,
                                                      timeout=delta_timeout)
             else:
-                in_progress_nodes = filter_nodes(nodes, 'PROCESSING')
-                if in_progress_nodes:
-                    # There are still nodes under process, wait for notification from them
+                if not all_edges_are_traversed():
                     return
+
                 # Call DB methods based on the action
                 stack_obj = parser.Stack.load(cnxt, stack_id)
                 if stack.action == parser.Stack.DELETE:
@@ -755,7 +747,7 @@ class EngineService(service.Service):
                             stack.action, stack.status) == (
                             parser.Stack.UPDATE, parser.Stack.GC_IN_PROGRESS) \
                             else False
-        db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
+        db_api.update_resource_traversal(cnxt, stack_id, True, name)
         res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id,
                                                     version)
         if stack.status == parser.Stack.FAILED:

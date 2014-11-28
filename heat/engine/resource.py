@@ -82,8 +82,8 @@ class Resource(object):
         'SUSPEND', 'RESUME', 'ADOPT', 'SNAPSHOT', 'CHECK',
     )
 
-    STATUSES = (INIT, IN_PROGRESS, FAILED, COMPLETE
-                ) = ('INIT', 'IN_PROGRESS', 'FAILED', 'COMPLETE')
+    STATUSES = (INIT, IN_PROGRESS, FAILED, COMPLETE, SCHEDULED
+                ) = ('INIT', 'IN_PROGRESS', 'FAILED', 'COMPLETE', 'SCHEDULED')
 
     # If True, this resource must be created before it can be referenced.
     strict_dependency = True
@@ -556,7 +556,7 @@ class Resource(object):
         to customise creation.
         '''
         action = self.CREATE
-        if (self.action, self.status) != (self.CREATE, self.INIT):
+        if (self.action, self.status) not in ((self.CREATE, self.INIT), (self.CREATE, self.SCHEDULED)):
             exc = exception.Error(_('State %s invalid for create')
                                   % six.text_type(self.state))
             raise exception.ResourceFailure(exc, self, action)

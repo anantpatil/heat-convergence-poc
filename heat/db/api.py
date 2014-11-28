@@ -358,8 +358,8 @@ def get_ready_nodes(context, stack_id, reverse=False):
         return IMPL.get_ready_nodes(context, stack_id, reverse)
 
 
-def update_resource_traversal(context, stack_id, status, resource_name=None):
-    return IMPL.update_resource_traversal(context, stack_id, status,
+def update_resource_traversal(context, stack_id, traversed, resource_name=None):
+    return IMPL.update_resource_traversal(context, stack_id, traversed,
                                           resource_name)
 
 
@@ -384,3 +384,7 @@ def get_untraversed_edges(context, stack_id):
 
 def get_all_resources_from_graph(context, stack_id):
     return IMPL.get_all_resources_from_graph(context, stack_id)
+
+
+def resource_set_state(context, res_name, version, stack_id, action=None, status=None, status_reason=''):
+    return IMPL.resource_set_state(context, res_name, version, stack_id, action=action, status=status, status_reason=status_reason)
