@@ -10,6 +10,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from keystone.common.validation import nullable
 """
 SQLAlchemy models for heat data.
 """
@@ -143,7 +144,8 @@ class Stack(BASE, HeatBase, SoftDelete, StateAware):
     # time the create/update call was issued, not the time the DB entry is
     # created/modified. (bug #1193269)
     updated_at = sqlalchemy.Column(sqlalchemy.DateTime)
-
+    req_id = sqlalchemy.Column(sqlalchemy.String(36), nullable=False,
+                               unique=True)
 
 class StackLock(BASE, HeatBase):
     """Store stack locks for deployments with multiple-engines."""
@@ -256,7 +258,7 @@ class Resource(BASE, HeatBase, StateAware):
     properties_data = sqlalchemy.Column('properties_data', Json)
     rsrc_defn = sqlalchemy.Column('rsrc_defn', sqlalchemy.UnicodeText())
     rsrc_defn_hash = sqlalchemy.Column('rsrc_defn_hash', sqlalchemy.String(40))
-
+    engine_id = sqlalchemy.Column(sqlalchemy.String(36))
 
 class WatchRule(BASE, HeatBase):
     """Represents a watch_rule created by the heat engine."""

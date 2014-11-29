@@ -82,8 +82,8 @@ class Resource(object):
         'SUSPEND', 'RESUME', 'ADOPT', 'SNAPSHOT', 'CHECK',
     )
 
-    STATUSES = (INIT, IN_PROGRESS, FAILED, COMPLETE, SCHEDULED
-                ) = ('INIT', 'IN_PROGRESS', 'FAILED', 'COMPLETE', 'SCHEDULED')
+    STATUSES = (IN_PROGRESS, FAILED, COMPLETE
+                ) = ('IN_PROGRESS', 'FAILED', 'COMPLETE')
 
     # If True, this resource must be created before it can be referenced.
     strict_dependency = True
@@ -1040,8 +1040,8 @@ class Resource(object):
 
         old_state = (self.action, self.status)
         new_state = (action, status)
-        self._store_or_update(action, status, reason)
-
+        # Records only the events, do not update DB.
+        #self._store_or_update(action, status, reason)
 
         if new_state != old_state:
             self._add_event(action, status, reason)
