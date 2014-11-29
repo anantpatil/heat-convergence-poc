@@ -484,6 +484,7 @@ class Resource(object):
         else:
             self.state_set(action, self.COMPLETE)
 
+    @scheduler.wrappertask
     def action_handler_task(self, action, args=[], action_prefix=None):
         '''
         A task to call the Resource subclass's handler methods for an action.
@@ -693,6 +694,7 @@ class Resource(object):
     @scheduler.wrappertask
     def update(self):
         #TODO: for concurrent update, version -1 might not have realized.
+        LOG.debug("==== Update called for %s", self.name)
         db_resource = db_api.resource_get_by_name_and_stack(self.context,
                                                             self.name,
                                                             self.stack.id,
@@ -714,6 +716,7 @@ class Resource(object):
                 "Remove nova_instance from old resource version")
             yield self.create()
 
+    @scheduler.wrappertask
     def do_update(self, after, before=None, prev_resource=None):
         '''
         update the resource. Subclasses should provide a handle_update() method

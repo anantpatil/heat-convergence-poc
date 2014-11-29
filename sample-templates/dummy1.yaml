@@ -1,0 +1,15 @@
+heat_template_version: 2013-05-23
+description: Dummy Resource with random string as ID
+
+parameters:
+    len:
+        type: string
+        default: 16
+
+resources:
+    dumb:
+        type: OS::Heat::Dummy
+        properties:
+            length: {get_param: len}
+            update_in_place_prop: "ntty"
+

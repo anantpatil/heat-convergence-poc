@@ -811,14 +811,6 @@ class EngineService(service.Service):
             else:
                 stack.create_start()
 
-            if (stack.action in (stack.CREATE, stack.ADOPT)
-                    and stack.status == stack.COMPLETE):
-                if self.stack_watch:
-                    # Schedule a periodic watcher task for this stack
-                    self.stack_watch.start_watch_task(stack.id, cnxt)
-            else:
-                LOG.info(_LI("Stack create failed, status %s"), stack.status)
-
         stack = self._parse_template_and_validate_stack(cnxt,
                                                         stack_name,
                                                         template,
