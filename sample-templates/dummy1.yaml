@@ -10,6 +10,6 @@ resources:
     dumb:
         type: OS::Heat::Dummy
         properties:
-            length: {get_param: len}
+            name_len: {get_param: len}
             update_in_place_prop: "ntty"
 

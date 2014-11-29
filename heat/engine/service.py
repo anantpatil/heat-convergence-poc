@@ -706,6 +706,9 @@ class EngineService(service.Service):
                 pass
 
         def handle_success():
+            if stack.status == stack.FAILED:
+                # some earlier event marked this as failed, don't proceed
+                return
             delta_timeout = self._get_stack_timeout_delta(stack)
             nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
             ready_nodes = filter_nodes(nodes, 'UNPROCESSED')
