@@ -1,43 +1,49 @@
-====
-HEAT
-====
+=================================
+HEAT CONVERGENCE Proof-of-Concept
+=================================
 
-Heat is a service to orchestrate multiple composite cloud applications using
-templates, through both an OpenStack-native ReST API and a
-CloudFormation-compatible Query API.
+This repo is for demonstrating proof-of-concept for adopting convergence
+into Openstack Heat.
 
-Why heat? It makes the clouds rise and keeps them there.
+Convergence spec: https://review.openstack.org/#/c/95907/
+Convergence PoC Wiki: https://wiki.openstack.org/wiki/Heat/ConvergenceDesign
+Persisting dependency graph and resource versioning: https://review.openstack.org/#/c/123749/
+
 
 Getting Started
 ---------------
 
-If you'd like to run from the master branch, you can clone the git repo:
+New resource named "random_sleep" is used for testing. The resource
+create/update/delete simply sleeps for few seconds (between 1-10) and
+returns as done. Generates a random string as physical resource ID.
 
-    git clone git@github.com:openstack/heat.git
+This resource update-in-place property. Just change this property to
+emulate update-in-place behaviour. If this property is not changed, the
+resource is replaced with new resource.
+
+To fail a resource just pass fail_property as 1 while creating/updating.
 
 
-* Wiki: http://wiki.openstack.org/Heat
-* Developer docs: http://docs.openstack.org/developer/heat
-
-
-Python client
--------------
-https://github.com/openstack/python-heatclient
-
-References
+How to run
 ----------
-* http://docs.amazonwebservices.com/AWSCloudFormation/latest/APIReference/API_CreateStack.html
-* http://docs.amazonwebservices.com/AWSCloudFormation/latest/UserGuide/create-stack.html
-* http://docs.amazonwebservices.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html
-* http://www.oasis-open.org/committees/tc_home.php?wg_abbrev=tosca
+Set up a devstack environment, download the local.conf and stackrc from
+this repo and run stack.sh. The setup would be very light-weight, only
+heat API and heat engine would be running as service.
 
-We have integration with
-------------------------
-* https://github.com/openstack/python-novaclient (instance)
-* https://github.com/openstack/python-keystoneclient (auth)
-* https://github.com/openstack/python-swiftclient (s3)
-* https://github.com/openstack/python-neutronclient (networking)
-* https://github.com/openstack/python-ceilometerclient (metering)
-* https://github.com/openstack/python-cinderclient (storage service)
-* https://github.com/openstack/python-glanceclient (image service)
-* https://github.com/openstack/python-troveclient (database as a Service)
+Review the contents of local.conf w.r.t. host IP address and no_proxy
+etc. and run stack.sh.
+
+This PoC requires Database and AMQP, since the implementation needs its
+features. With out them convergence si difficult to achieve. The code in
+Heat engine beomes simpler with these supporting infrastructure. Please
+read more on the wiki page on why didn't had standalone PoC.
+
+The sample-templates contain few templates which you can use to
+create/update the stack. Note that we have not covered SNAPSHOT,
+SUSPEND, ABANDON/ADOPT, and RESUME features.
+
+Changes
+-------
+All the code not needed for PoC is removed.
+service.py, stack.py and resource.py has most of the changes and almost
+re-written.

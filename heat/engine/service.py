@@ -662,7 +662,7 @@ class EngineService(service.Service):
             if acquired_lock is None:
                 return lock
             else:
-                eventlet.sleep(0.2)
+                eventlet.sleep(0.5)
                 current_time = datetime.datetime.now().replace(microsecond=0)
         return
 
