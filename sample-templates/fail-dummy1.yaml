@@ -7,9 +7,9 @@ parameters:
         default: 16
 
 resources:
-    dumb:
+    U:
         type: OS::Heat::Dummy
         properties:
-            length: {get_param: len}
+            name_len: {get_param: len}
             fail_prop: "yes"
 

@@ -42,7 +42,7 @@ class Dummy(resource.Resource):
         LENGTH, SEQUENCE, CHARACTER_CLASSES, CHARACTER_SEQUENCES,
         SALT, UPDATE_IN_PLACE_PROP, FAIL_PROP
     ) = (
-        'length', 'sequence', 'character_classes', 'character_sequences',
+        'name_len', 'sequence', 'character_classes', 'character_sequences',
         'salt', 'update_in_place_prop', 'fail_prop',
     )
 
@@ -293,7 +293,7 @@ class Dummy(resource.Resource):
         
         # sleep for random time 
         sleep_secs = random.randint(0, 6)
-        LOG.info("==== Resource %s sleeping for %s seconds", self.name, sleep_secs)
+        LOG.debug("Resource %s sleeping for %s seconds", self.name, sleep_secs)
         eventlet.sleep(sleep_secs)
        
         # emulate failure 
@@ -301,16 +301,20 @@ class Dummy(resource.Resource):
             raise Exception("Dummy failed %s", self.name)
             
     def handle_update(self, json_snippet=None, tmpl_diff=None, prop_diff=None):
-        LOG.info("==== handle_update called...")
         fail_prop = self.properties.get(self.FAIL_PROP)
         sleep_secs = random.randint(0, 6)
-        LOG.info("==== Update of Resource %s sleeping for %s seconds", self.name, sleep_secs)
+        LOG.debug("Update of Resource %s sleeping for %s seconds", self.name, sleep_secs)
         eventlet.sleep(sleep_secs)
        
         # emulate failure 
         if fail_prop.lower() == 'yes' or fail_prop.lower() == 'y':
             raise Exception("Dummy failed %s", self.name)
         
+    def handle_delete(self):
+        sleep_secs = random.randint(0, 6)
+        LOG.debug("Delete of Resource %s sleeping for %s seconds", self.name, sleep_secs)
+        eventlet.sleep(sleep_secs)
+
     def _resolve_attribute(self, name):
         if name == self.VALUE:
             return self.data().get(self.VALUE)
