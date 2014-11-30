@@ -24,6 +24,7 @@ def upgrade(migrate_engine):
 
     resource = sqlalchemy.Table('resource', meta, autoload=True)
     engine_id = sqlalchemy.Column('engine_id', sqlalchemy.String(36))
+    engine_id.create(resource)
 
 
 def downgrade(migrate_engine):

@@ -1038,12 +1038,12 @@ def resource_graph_delete_all_edges(context, stack_id, resource_name):
     with session.begin():
         session.query(models.ResourceGraph).\
             filter_by(stack_id=stack_id).\
-            filter(models.ResourceGraph.needed_by == resource_name).\
-            update({'needed_by': ''})
-        session.query(models.ResourceGraph).\
-            filter_by(stack_id=stack_id).\
             filter(models.ResourceGraph.resource_name == resource_name).\
             delete()
+        session.query(models.ResourceGraph).\
+            filter_by(stack_id=stack_id).\
+            filter(models.ResourceGraph.needed_by == resource_name).\
+            update({'needed_by': ''})
     session.flush()
 
 

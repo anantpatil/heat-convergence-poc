@@ -102,6 +102,10 @@ class Dummy(resource.Resource):
     def validate(self):
         pass
 
+
+    def _get_random_sleep_secs(self):
+        return random.randint(1, 5)
+    
     def handle_create(self):
         length = self.properties.get(self.LENGTH)
         fail_prop = self.properties.get(self.FAIL_PROP)
@@ -114,7 +118,7 @@ class Dummy(resource.Resource):
         self.resource_id_set(random_string)
         
         # sleep for random time 
-        sleep_secs = random.randint(0, 6)
+        sleep_secs = self._get_random_sleep_secs()
         LOG.debug("Resource %s sleeping for %s seconds", self.name, sleep_secs)
         eventlet.sleep(sleep_secs)
        
@@ -124,7 +128,7 @@ class Dummy(resource.Resource):
             
     def handle_update(self, json_snippet=None, tmpl_diff=None, prop_diff=None):
         fail_prop = self.properties.get(self.FAIL_PROP)
-        sleep_secs = random.randint(0, 6)
+        sleep_secs = self._get_random_sleep_secs()
         LOG.debug("Update of Resource %s sleeping for %s seconds", self.name, sleep_secs)
         eventlet.sleep(sleep_secs)
        
@@ -133,7 +137,7 @@ class Dummy(resource.Resource):
             raise Exception("Dummy failed %s", self.name)
         
     def handle_delete(self):
-        sleep_secs = random.randint(0, 6)
+        sleep_secs = self._get_random_sleep_secs()
         LOG.debug("Delete of Resource %s sleeping for %s seconds", self.name, sleep_secs)
         eventlet.sleep(sleep_secs)
 
