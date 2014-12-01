@@ -532,8 +532,10 @@ class EngineClient(object):
                                              version=version,
                                              timeout=timeout))
 
-    def notify_resource_observed(self, cnxt, stack_id, name, version):
+    def notify_resource_observed(self, cnxt, stack_id, name, version, status, status_reason):
         return self.cast(cnxt, self.make_msg('notify_resource_observed',
                                              stack_id=stack_id,
                                              name=name,
-                                             version=version))
+                                             version=version,
+                                             status=status,
+                                             status_reason=status_reason))

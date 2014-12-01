@@ -18,6 +18,7 @@ import os
 
 import datetime
 import eventlet
+eventlet.monkey_patch() 
 from oslo.config import cfg
 from oslo import messaging
 from oslo.serialization import jsonutils
@@ -218,88 +219,6 @@ class ThreadGroupManager(object):
             event.send(message)
 
 
-class StackWatch(object):
-    def __init__(self, thread_group_mgr):
-        self.thread_group_mgr = thread_group_mgr
-
-    def start_watch_task(self, stack_id, cnxt):
-
-        def stack_has_a_watchrule(sid):
-            wrs = db_api.watch_rule_get_all_by_stack(cnxt, sid)
-
-            now = timeutils.utcnow()
-            start_watch_thread = False
-            for wr in wrs:
-                # reset the last_evaluated so we don't fire off alarms when
-                # the engine has not been running.
-                db_api.watch_rule_update(cnxt, wr.id, {'last_evaluated': now})
-
-                if wr.state != rpc_api.WATCH_STATE_CEILOMETER_CONTROLLED:
-                    start_watch_thread = True
-
-            children = db_api.stack_get_all_by_owner_id(cnxt, sid)
-            for child in children:
-                if stack_has_a_watchrule(child.id):
-                    start_watch_thread = True
-
-            return start_watch_thread
-
-        if stack_has_a_watchrule(stack_id):
-            self.thread_group_mgr.add_timer(
-                stack_id,
-                self.periodic_watcher_task,
-                sid=stack_id)
-
-    def check_stack_watches(self, sid):
-        # Retrieve the stored credentials & create context
-        # Require tenant_safe=False to the stack_get to defeat tenant
-        # scoping otherwise we fail to retrieve the stack
-        LOG.debug("Periodic watcher task for stack %s" % sid)
-        admin_context = context.get_admin_context()
-        db_stack = db_api.stack_get(admin_context, sid, tenant_safe=False,
-                                    eager_load=True)
-        if not db_stack:
-            LOG.error(_LE("Unable to retrieve stack %s for periodic task"),
-                      sid)
-            return
-        stack = parser.Stack.load(admin_context, stack=db_stack,
-                                  use_stored_context=True)
-
-        # recurse into any nested stacks.
-        children = db_api.stack_get_all_by_owner_id(admin_context, sid)
-        for child in children:
-            self.check_stack_watches(child.id)
-
-        # Get all watchrules for this stack and evaluate them
-        try:
-            wrs = db_api.watch_rule_get_all_by_stack(admin_context, sid)
-        except Exception as ex:
-            LOG.warn(_LW('periodic_task db error watch rule removed? %(ex)s'),
-                     ex)
-            return
-
-        def run_alarm_action(stack, actions, details):
-            for action in actions:
-                action(details=details)
-            for res in stack.itervalues():
-                res.metadata_update()
-
-        for wr in wrs:
-            rule = watchrule.WatchRule.load(stack.context, watch=wr)
-            actions = rule.evaluate()
-            if actions:
-                self.thread_group_mgr.start(sid, run_alarm_action, stack,
-                                            actions, rule.get_details())
-
-    def periodic_watcher_task(self, sid):
-        """
-        Periodic task, created for each stack, triggers watch-rule
-        evaluation for all rules defined for the stack
-        sid = stack ID
-        """
-        self.check_stack_watches(sid)
-
-
 @profiler.trace_cls("rpc")
 class EngineListener(service.Service):
     '''
@@ -339,6 +258,29 @@ class EngineListener(service.Service):
         self.thread_group_mgr.send(stack_id, message)
 
 
+class StackListener(service.Service):
+    def __init__(self, stack_id):
+        super(StackListener, self).__init__()
+        self.id = stack_id
+        self.server = None
+
+    def start(self):
+        super(StackListener, self).start()
+        print cfg.CONF.host
+        self.target = messaging.Target(server=cfg.CONF.host, topic=self.id)
+        self.server = rpc_messaging.get_rpc_server(self.target, self)
+        print "before"
+        self.server.start()
+        print "after"
+        
+    def stop(self):
+        if self.server:
+            self.server.stop()
+
+    def stack_id(self, ctxt, val1, val2):
+        #print val
+        return "true"
+
 @profiler.trace_cls("rpc")
 class EngineService(service.Service):
     """
@@ -361,7 +303,6 @@ class EngineService(service.Service):
 
         # The following are initialized here, but assigned in start() which
         # happens after the fork when spawning multiple worker processes
-        self.stack_watch = None
         self.listener = None
         self.engine_id = None
         self.thread_group_mgr = None
@@ -380,25 +321,13 @@ class EngineService(service.Service):
                           'delegate subset roles when upgrading.',
                           Warning)
 
-    def create_periodic_tasks(self):
-        LOG.debug("Starting periodic watch tasks pid=%s" % os.getpid())
-        # Note with multiple workers, the parent process hasn't called start()
-        # so we need to create a ThreadGroupManager here for the periodic tasks
-        if self.thread_group_mgr is None:
-            self.thread_group_mgr = ThreadGroupManager()
-        self.stack_watch = StackWatch(self.thread_group_mgr)
-
-        # Create a periodic_watcher_task per-stack
-        admin_context = context.get_admin_context()
-        stacks = db_api.stack_get_all(admin_context, tenant_safe=False)
-        for s in stacks:
-            self.stack_watch.start_watch_task(s.id, admin_context)
-
     def start(self):
         self.engine_id = stack_lock.StackLock.generate_engine_id()
         self.thread_group_mgr = ThreadGroupManager()
         self.listener = EngineListener(self.host, self.engine_id,
                                        self.thread_group_mgr)
+        sl = StackListener("12345678")
+        sl.start()
         LOG.debug("Starting listener for engine %s" % self.engine_id)
         self.listener.start()
         target = messaging.Target(
@@ -596,32 +525,6 @@ class EngineService(service.Service):
         stack.validate()
         return stack
 
-    @request_context
-    def preview_stack(self, cnxt, stack_name, template, params, files, args):
-        """
-        Simulates a new stack using the provided template.
-
-        Note that at this stage the template has already been fetched from the
-        heat-api process if using a template-url.
-
-        :param cnxt: RPC context.
-        :param stack_name: Name of the stack you want to create.
-        :param template: Template of stack you want to create.
-        :param params: Stack Input Params
-        :param files: Files referenced from the template
-        :param args: Request parameters/args passed from API
-        """
-
-        LOG.info(_LI('previewing stack %s'), stack_name)
-        stack = self._parse_template_and_validate_stack(cnxt,
-                                                        stack_name,
-                                                        template,
-                                                        params,
-                                                        files,
-                                                        args)
-
-        return api.format_stack_preview(stack)
-
 
     @request_context
     def converge_resource(self, cnxt, stack_id, name, version, timeout):
@@ -629,13 +532,16 @@ class EngineService(service.Service):
         # TODO remove check_create_complete from resource_action
         try:
             stack.resource_action_runner(name, version, timeout)
+            status = resourcem.Resource.COMPLETE
+            status_reason = ""
         except Exception as e:
-            stack.state_set(stack.action, stack.FAILED, e.args[0] if e.args
-                            else 'Failed stack pre-ops: %s' % six.text_type(e))
+            status = resourcem.Resource.FAILED
+            status_reason = str(e)
+            
         # notify Engine to converge
         # TODO notify observer to check_create_complete once observer 
         # code is ready.
-        stack.rpc_client.notify_resource_observed(cnxt, stack_id, name, version)
+        stack.rpc_client.notify_resource_observed(cnxt, stack_id, name, version, status, status_reason)
 
 
     def _get_stack_timeout_delta(self, stack):
@@ -674,18 +580,19 @@ class EngineService(service.Service):
         db_api.stack_update(stack.context, stack.id, values)
 
     @request_context
-    def notify_resource_observed(self, cnxt, stack_id, name, version):
+    def notify_resource_observed(self, cnxt, stack_id, name, version,
+                                 status, status_reason):
         stack = db_api.stack_get(cnxt, stack_id)
         lock = self._spin_wait_acquire_lock(cnxt, stack)
         if lock:
             self.thread_group_mgr.start_with_acquired_lock(
                 stack, lock,  self.handle_resource_notif, cnxt, name, stack,
-                version)
+                version, status, status_reason)
         else:
             # stack timedout
             self._handle_stack_timeout(stack)
 
-    def handle_resource_notif(self, cnxt, name, stack, version):
+    def handle_resource_notif(self, cnxt, name, stack, version, status, status_reason):
         def all_edges_are_traversed():
             return not db_api.get_untraversed_edges(cnxt, stack_id)
 
@@ -739,6 +646,7 @@ class EngineService(service.Service):
                 cnxt, stack_id=stack_id,
                 timeout=self.get_stack_timeout_delta(stack))
             return
+
         reverse_actions = [parser.Stack.DELETE, parser.Stack.ROLLBACK]
         reverse = True if stack.action in reverse_actions or (
                             stack.action, stack.status) == (
@@ -769,6 +677,11 @@ class EngineService(service.Service):
                 db_api.stack_update(cnxt, stack_id, values)
                 handle_failure()
 
+
+    def create_stack_listner(self):
+        pass
+
+    
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
                      owner_id=None):
@@ -789,19 +702,24 @@ class EngineService(service.Service):
         """
         LOG.info(_LI('Creating stack %s'), stack_name)
 
+        #client = rpc_messaging.get_rpc_client(version='1.1')
+        #cctxt = client.prepare(version='1.0',timeout=10,topic="12345678")
+        #args ={'param':"Ishant"}
+        #cctxt.call(cnxt, 'output', **args)
+        #cancel_result = self._remote_call(cnxt, engine_id, self.listener.SEND,stack_identity, rpc_api.THREAD_CANCEL)
+        result = self._remote_call(cnxt, '12345678', 'stack_id', val1='ishant', val2='tyagi')
+        print result
+
+
+        return stack_name
+    
         def _stack_create(stack):
 
             if not stack.stack_user_project_id:
                 stack.create_stack_user_project_id()
 
             # Create/Adopt a stack, and create the periodic task if successful
-            if stack.adopt_stack_data:
-                if not cfg.CONF.enable_stack_adopt:
-                    raise exception.NotSupported(feature='Stack Adopt')
-
-                stack.adopt()
-            else:
-                stack.create_start()
+            stack.create_start()
 
         stack = self._parse_template_and_validate_stack(cnxt,
                                                         stack_name,
@@ -812,7 +730,9 @@ class EngineService(service.Service):
                                                         owner_id)
 
         stack.store()
-
+        # create a listerner for this stack and spawn a thread which
+        # will listen on this stack topic.
+        self.create_stack_listner()
         self.thread_group_mgr.start_with_lock(cnxt, stack, self.engine_id,
                                               _stack_create, stack)
 
@@ -1019,7 +939,7 @@ class EngineService(service.Service):
             timeout=timeout,
             topic=lock_engine_id)
         try:
-            self.cctxt.call(cnxt, call, *args, **kwargs)
+            return self.cctxt.call(cnxt, call, *args, **kwargs)
         except messaging.MessagingTimeout:
             return False
 
@@ -1075,28 +995,6 @@ class EngineService(service.Service):
                                               stack.delete_start)
         return None
 
-    @request_context
-    def abandon_stack(self, cnxt, stack_identity):
-        """
-        The abandon_stack method abandons a given stack.
-        :param cnxt: RPC context.
-        :param stack_identity: Name of the stack you want to abandon.
-        """
-        if not cfg.CONF.enable_stack_abandon:
-            raise exception.NotSupported(feature='Stack Abandon')
-
-        st = self._get_stack(cnxt, stack_identity)
-        LOG.info(_LI('abandoning stack %s'), st.name)
-        stack = parser.Stack.load(cnxt, stack=st)
-        lock = stack_lock.StackLock(cnxt, stack, self.engine_id)
-        with lock.thread_lock(stack.id):
-            # Get stack details before deleting it.
-            stack_info = stack.prepare_abandon()
-            self.thread_group_mgr.start_with_acquired_lock(stack,
-                                                           lock,
-                                                           stack.delete,
-                                                           abandon=True)
-            return stack_info
 
     def list_resource_types(self, cnxt, support_status=None):
         """
@@ -1306,81 +1204,6 @@ class EngineService(service.Service):
                 for resource in stack.iter_resources(depth)]
 
     @request_context
-    def stack_suspend(self, cnxt, stack_identity):
-        '''
-        Handle request to perform suspend action on a stack
-        '''
-        def _stack_suspend(stack):
-            LOG.debug("suspending stack %s" % stack.name)
-            stack.suspend()
-
-        s = self._get_stack(cnxt, stack_identity)
-
-        stack = parser.Stack.load(cnxt, stack=s)
-        self.thread_group_mgr.start_with_lock(cnxt, stack, self.engine_id,
-                                              _stack_suspend, stack)
-
-    @request_context
-    def stack_resume(self, cnxt, stack_identity):
-        '''
-        Handle request to perform a resume action on a stack
-        '''
-        def _stack_resume(stack):
-            LOG.debug("resuming stack %s" % stack.name)
-            stack.resume()
-
-        s = self._get_stack(cnxt, stack_identity)
-
-        stack = parser.Stack.load(cnxt, stack=s)
-        self.thread_group_mgr.start_with_lock(cnxt, stack, self.engine_id,
-                                              _stack_resume, stack)
-
-    @request_context
-    def stack_snapshot(self, cnxt, stack_identity, name):
-        def _stack_snapshot(stack, snapshot):
-            LOG.debug("snapshotting stack %s" % stack.name)
-            stack.snapshot()
-            data = stack.prepare_abandon()
-            db_api.snapshot_update(
-                cnxt,
-                snapshot.id,
-                {'data': data, 'status': stack.status,
-                 'status_reason': stack.status_reason})
-
-        s = self._get_stack(cnxt, stack_identity)
-
-        stack = parser.Stack.load(cnxt, stack=s)
-
-        lock = stack_lock.StackLock(cnxt, stack, self.engine_id)
-
-        with lock.thread_lock(stack.id):
-            snapshot = db_api.snapshot_create(cnxt, {
-                'tenant': cnxt.tenant_id,
-                'name': name,
-                'stack_id': stack.id,
-                'status': 'IN_PROGRESS'})
-            self.thread_group_mgr.start_with_acquired_lock(
-                stack, lock, _stack_snapshot, stack, snapshot)
-            return api.format_snapshot(snapshot)
-
-    @request_context
-    def show_snapshot(self, cnxt, stack_identity, snapshot_id):
-        snapshot = db_api.snapshot_get(cnxt, snapshot_id)
-        return api.format_snapshot(snapshot)
-
-    @request_context
-    def delete_snapshot(self, cnxt, stack_identity, snapshot_id):
-        def _delete_snapshot(stack, snapshot):
-            stack.delete_snapshot(snapshot)
-            db_api.snapshot_delete(cnxt, snapshot_id)
-
-        s = self._get_stack(cnxt, stack_identity)
-        stack = parser.Stack.load(cnxt, stack=s)
-        snapshot = db_api.snapshot_get(cnxt, snapshot_id)
-        self.thread_group_mgr.start(
-            stack.id, _delete_snapshot, stack, snapshot)
-
-    @request_context
     def stack_check(self, cnxt, stack_identity):
         '''
         Handle request to perform a check action on a stack
@@ -1392,257 +1215,3 @@ class EngineService(service.Service):
         self.thread_group_mgr.start_with_lock(cnxt, stack, self.engine_id,
                                               stack.check)
 
-    @request_context
-    def stack_list_snapshots(self, cnxt, stack_identity):
-        s = self._get_stack(cnxt, stack_identity)
-        data = db_api.snapshot_get_all(cnxt, s.id)
-        return [api.format_snapshot(snapshot) for snapshot in data]
-
-    @request_context
-    def metadata_update(self, cnxt, stack_identity,
-                        resource_name, metadata):
-        """
-        Update the metadata for the given resource.
-        DEPRECATED: Use resource_signal instead
-        """
-        warnings.warn('metadata_update is deprecated, '
-                      'use resource_signal instead',
-                      DeprecationWarning)
-
-        s = self._get_stack(cnxt, stack_identity)
-
-        stack = parser.Stack.load(cnxt, stack=s)
-        if resource_name not in stack:
-            raise exception.ResourceNotFound(resource_name=resource_name,
-                                             stack_name=stack.name)
-
-        resource = stack[resource_name]
-        resource.metadata_update(new_metadata=metadata)
-
-        # This is not "nice" converting to the stored context here,
-        # but this happens because the keystone user associated with the
-        # WaitCondition doesn't have permission to read the secret key of
-        # the user associated with the cfn-credentials file
-        refresh_stack = parser.Stack.load(cnxt, stack=s,
-                                          use_stored_context=True)
-
-        # Refresh the metadata for all other resources, since we expect
-        # resource_name to be a WaitCondition resource, and other
-        # resources may refer to WaitCondition Fn::GetAtt Data, which
-        # is updated here.
-        for res in refresh_stack.dependencies:
-            if res.name != resource_name and res.id is not None:
-                res.metadata_update()
-
-        return resource.metadata_get()
-
-    @request_context
-    def create_watch_data(self, cnxt, watch_name, stats_data):
-        '''
-        This could be used by CloudWatch and WaitConditions
-        and treat HA service events like any other CloudWatch.
-        '''
-        def get_matching_watches():
-            if watch_name:
-                yield watchrule.WatchRule.load(cnxt, watch_name)
-            else:
-                for wr in db_api.watch_rule_get_all(cnxt):
-                    if watchrule.rule_can_use_sample(wr, stats_data):
-                        yield watchrule.WatchRule.load(cnxt, watch=wr)
-
-        rule_run = False
-        for rule in get_matching_watches():
-            rule.create_watch_data(stats_data)
-            rule_run = True
-
-        if not rule_run:
-            if watch_name is None:
-                watch_name = 'Unknown'
-            raise exception.WatchRuleNotFound(watch_name=watch_name)
-
-        return stats_data
-
-    @request_context
-    def show_watch(self, cnxt, watch_name):
-        """
-        The show_watch method returns the attributes of one watch/alarm
-
-        :param cnxt: RPC context.
-        :param watch_name: Name of the watch you want to see, or None to see
-            all
-        """
-        if watch_name:
-            wrn = [watch_name]
-        else:
-            try:
-                wrn = [w.name for w in db_api.watch_rule_get_all(cnxt)]
-            except Exception as ex:
-                LOG.warn(_LW('show_watch (all) db error %s'), ex)
-                return
-
-        wrs = [watchrule.WatchRule.load(cnxt, w) for w in wrn]
-        result = [api.format_watch(w) for w in wrs]
-        return result
-
-    @request_context
-    def show_watch_metric(self, cnxt, metric_namespace=None, metric_name=None):
-        """
-        The show_watch method returns the datapoints for a metric
-
-        :param cnxt: RPC context.
-        :param metric_namespace: Name of the namespace you want to see, or None
-            to see all
-        :param metric_name: Name of the metric you want to see, or None to see
-            all
-        """
-
-        # DB API and schema does not yet allow us to easily query by
-        # namespace/metric, but we will want this at some point
-        # for now, the API can query all metric data and filter locally
-        if metric_namespace is not None or metric_name is not None:
-            LOG.error(_LE("Filtering by namespace/metric not yet supported"))
-            return
-
-        try:
-            wds = db_api.watch_data_get_all(cnxt)
-        except Exception as ex:
-            LOG.warn(_LW('show_metric (all) db error %s'), ex)
-            return
-
-        result = [api.format_watch_data(w) for w in wds]
-        return result
-
-    @request_context
-    def set_watch_state(self, cnxt, watch_name, state):
-        """
-        Temporarily set the state of a given watch
-
-        :param cnxt: RPC context.
-        :param watch_name: Name of the watch
-        :param state: State (must be one defined in WatchRule class
-        """
-        wr = watchrule.WatchRule.load(cnxt, watch_name)
-        if wr.state == rpc_api.WATCH_STATE_CEILOMETER_CONTROLLED:
-            return
-        actions = wr.set_watch_state(state)
-        for action in actions:
-            self.thread_group_mgr.start(wr.stack_id, action)
-
-        # Return the watch with the state overridden to indicate success
-        # We do not update the timestamps as we are not modifying the DB
-        result = api.format_watch(wr)
-        result[rpc_api.WATCH_STATE_VALUE] = state
-        return result
-
-    @request_context
-    def show_software_config(self, cnxt, config_id):
-        sc = db_api.software_config_get(cnxt, config_id)
-        return api.format_software_config(sc)
-
-    @request_context
-    def create_software_config(self, cnxt, group, name, config,
-                               inputs, outputs, options):
-
-        sc = db_api.software_config_create(cnxt, {
-            'group': group,
-            'name': name,
-            'config': {
-                'inputs': inputs,
-                'outputs': outputs,
-                'options': options,
-                'config': config
-            },
-            'tenant': cnxt.tenant_id})
-        return api.format_software_config(sc)
-
-    @request_context
-    def delete_software_config(self, cnxt, config_id):
-        db_api.software_config_delete(cnxt, config_id)
-
-    @request_context
-    def list_software_deployments(self, cnxt, server_id):
-        all_sd = db_api.software_deployment_get_all(cnxt, server_id)
-        result = [api.format_software_deployment(sd) for sd in all_sd]
-        return result
-
-    @request_context
-    def metadata_software_deployments(self, cnxt, server_id):
-        if not server_id:
-            raise ValueError(_('server_id must be specified'))
-        all_sd = db_api.software_deployment_get_all(cnxt, server_id)
-        # sort the configs by config name, to give the list of metadata a
-        # deterministic and controllable order.
-        all_sd_s = sorted(all_sd, key=lambda sd: sd.config.name)
-        result = [api.format_software_config(sd.config) for sd in all_sd_s]
-        return result
-
-    def _push_metadata_software_deployments(self, cnxt, server_id):
-        rs = db_api.resource_get_by_physical_resource_id(cnxt, server_id)
-        if not rs:
-            return
-        deployments = self.metadata_software_deployments(cnxt, server_id)
-        md = rs.rsrc_metadata or {}
-        md['deployments'] = deployments
-        rs.update_and_save({'rsrc_metadata': md})
-
-        metadata_put_url = None
-        for rd in rs.data:
-            if rd.key == 'metadata_put_url':
-                metadata_put_url = rd.value
-                break
-        if metadata_put_url:
-            json_md = jsonutils.dumps(md)
-            requests.put(metadata_put_url, json_md)
-
-    @request_context
-    def show_software_deployment(self, cnxt, deployment_id):
-        sd = db_api.software_deployment_get(cnxt, deployment_id)
-        return api.format_software_deployment(sd)
-
-    @request_context
-    def create_software_deployment(self, cnxt, server_id, config_id,
-                                   input_values, action, status,
-                                   status_reason, stack_user_project_id):
-
-        sd = db_api.software_deployment_create(cnxt, {
-            'config_id': config_id,
-            'server_id': server_id,
-            'input_values': input_values,
-            'tenant': cnxt.tenant_id,
-            'stack_user_project_id': stack_user_project_id,
-            'action': action,
-            'status': status,
-            'status_reason': status_reason})
-        self._push_metadata_software_deployments(cnxt, server_id)
-        return api.format_software_deployment(sd)
-
-    @request_context
-    def update_software_deployment(self, cnxt, deployment_id, config_id,
-                                   input_values, output_values, action,
-                                   status, status_reason):
-        update_data = {}
-        if config_id:
-            update_data['config_id'] = config_id
-        if input_values:
-            update_data['input_values'] = input_values
-        if output_values:
-            update_data['output_values'] = output_values
-        if action:
-            update_data['action'] = action
-        if status:
-            update_data['status'] = status
-        if status_reason:
-            update_data['status_reason'] = status_reason
-        sd = db_api.software_deployment_update(cnxt,
-                                               deployment_id, update_data)
-
-        # only push metadata if this update resulted in the config_id
-        # changing, since metadata is just a list of configs
-        if config_id:
-            self._push_metadata_software_deployments(cnxt, sd.server_id)
-
-        return api.format_software_deployment(sd)
-
-    @request_context
-    def delete_software_deployment(self, cnxt, deployment_id):
-        db_api.software_deployment_delete(cnxt, deployment_id)

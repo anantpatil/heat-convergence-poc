@@ -43,7 +43,7 @@ from heat.engine import resources
 from heat.engine import rsrc_defn
 from heat.engine import scheduler
 from heat.engine.template import Template
-from heat.engine import update
+#from heat.engine import update
 from heat.openstack.common import log as logging
 from heat.rpc import api as rpc_api
 from heat.rpc import client as rpc_client
@@ -632,26 +632,9 @@ class Stack(collections.Mapping):
         return [resource.preview()
                 for resource in self.resources.itervalues()]
 
-    @profiler.trace('Stack.create', hide_args=False)
-    def create(self):
-        '''
-        Create the stack and all of the resources.
-        '''
-        def rollback():
-            if not self.disable_rollback and self.state == (self.CREATE,
-                                                            self.FAILED):
-                self.delete(action=self.ROLLBACK)
-
-        creator = scheduler.TaskRunner(self.stack_task,
-                                       action=self.CREATE,
-                                       reverse=False,
-                                       post_func=rollback,
-                                       error_wait_time=ERROR_WAIT_TIME)
-        creator(timeout=self.timeout_secs())
-
     def create_start(self):
         for res in self.resources.values():
-            res.state_set(res.CREATE, res.INIT)
+            res.store()
         Stack.process_ready_resources(self.context, stack_id=self.id,
                                       timeout=self.timeout_secs())
 
@@ -762,6 +745,7 @@ class Stack(collections.Mapping):
                                                         self.id,
                                                         version)
         LOG.debug("=====Resource name %s, version %s", resource_name, version)
+        # TODO (ishant) : deserialize resource object instead of loading from DB
         rsrc = resource.Resource.load(db_rsrc, self)
         LOG.debug("=====Resource %s", rsrc)
         action_task = scheduler.TaskRunner(

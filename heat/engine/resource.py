@@ -82,8 +82,8 @@ class Resource(object):
         'SUSPEND', 'RESUME', 'ADOPT', 'SNAPSHOT', 'CHECK',
     )
 
-    STATUSES = (INIT, IN_PROGRESS, FAILED, COMPLETE, SCHEDULED
-                ) = ('INIT', 'IN_PROGRESS', 'FAILED', 'COMPLETE', 'SCHEDULED')
+    STATUSES = (IN_PROGRESS, FAILED, COMPLETE
+                ) = ('IN_PROGRESS', 'FAILED', 'COMPLETE')
 
     # If True, this resource must be created before it can be referenced.
     strict_dependency = True
@@ -528,13 +528,13 @@ class Resource(object):
         state transition
         '''
         assert action in self.ACTIONS, 'Invalid action %s' % action
+        # dont record any state over here
+        #with self._action_recorder(action):
+        if callable(pre_func):
+            pre_func()
 
-        with self._action_recorder(action):
-            if callable(pre_func):
-                pre_func()
-
-            handler_args = [resource_data] if resource_data is not None else []
-            yield self.action_handler_task(action, args=handler_args)
+        handler_args = [resource_data] if resource_data is not None else []
+        yield self.action_handler_task(action, args=handler_args)
 
     def _update_stored_properties(self):
         self._stored_properties_data = function.resolve(self.properties.data)
@@ -949,7 +949,6 @@ class Resource(object):
     def _store(self):
         '''Create the resource in the database.'''
         metadata = self.metadata_get()
-        rsrc_defn_json = json.dumps(dict(self.frozen_definition()))
         try:
             rs = {'action': self.action,
                   'status': self.status,
@@ -960,8 +959,6 @@ class Resource(object):
                   'rsrc_metadata': metadata,
                   'properties_data': self._stored_properties_data,
                   'stack_name': self.stack.name,
-                  'rsrc_defn': rsrc_defn_json,
-                  'rsrc_defn_hash': self._frozen_defn.sha1_hash,
                   'version': self.version}
 
             new_rs = db_api.resource_create(self.context, rs)
@@ -1044,6 +1041,9 @@ class Resource(object):
             self._add_event(action, status, reason)
 
             self.stack.reset_resource_attributes()
+
+    def db_state_set(self):
+        pass
 
     @property
     def state(self):
