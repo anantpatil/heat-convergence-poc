@@ -173,6 +173,13 @@ class Stack(collections.Mapping):
             self._db_resources = None
         return self._resources
 
+    def load_res_children(self, res_name):
+        """
+        Load the dependents of resource with given res_name along with the
+        resource. All immediate children are loaded.
+        """
+        pass
+    
     def iter_resources(self, nested_depth=0):
         '''
         Iterates over all the resources in a stack, including nested stacks up
@@ -503,44 +510,6 @@ class Stack(collections.Mapping):
         text = 'Stack "%s" [%s]' % (self.name, self.id)
         return encodeutils.safe_encode(text)
 
-    def resource_by_refid(self, refid):
-        '''
-        Return the resource in this stack with the specified
-        refid, or None if not found
-        '''
-        for r in self.values():
-            if r.state in (
-                    (r.INIT, r.COMPLETE),
-                    (r.CREATE, r.IN_PROGRESS),
-                    (r.CREATE, r.COMPLETE),
-                    (r.RESUME, r.IN_PROGRESS),
-                    (r.RESUME, r.COMPLETE),
-                    (r.UPDATE, r.IN_PROGRESS),
-                    (r.UPDATE, r.COMPLETE)) and r.FnGetRefId() == refid:
-                return r
-
-    def register_access_allowed_handler(self, credential_id, handler):
-        '''
-        Register a function which determines whether the credentials with
-        a give ID can have access to a named resource.
-        '''
-        assert callable(handler), 'Handler is not callable'
-        self._access_allowed_handlers[credential_id] = handler
-
-    def access_allowed(self, credential_id, resource_name):
-        '''
-        Returns True if the credential_id is authorised to access the
-        resource with the specified resource_name.
-        '''
-        if not self.resources:
-            # this also triggers lazy-loading of resources
-            # so is required for register_access_allowed_handler
-            # to be called
-            return False
-
-        handler = self._access_allowed_handlers.get(credential_id)
-        return handler and handler(resource_name)
-
     @profiler.trace('Stack.validate', hide_args=False)
     def validate(self):
         '''
@@ -595,14 +564,6 @@ class Stack(collections.Mapping):
                     reason = 'Output validation error: %s' % six.text_type(ex)
                     raise StackValidationFailed(message=reason)
 
-    def requires_deferred_auth(self):
-        '''
-        Returns whether this stack may need to perform API requests
-        during its lifecycle using the configured deferred authentication
-        method.
-        '''
-        return any(res.requires_deferred_auth for res in self.values())
-
     @profiler.trace('Stack.state_set', hide_args=False)
     def state_set(self, action, status, reason):
         '''Update the stack state in the database.'''
@@ -646,77 +607,11 @@ class Stack(collections.Mapping):
 
         return self.timeout_mins * 60
 
-    def preview_resources(self):
-        '''
-        Preview the stack with all of the resources.
-        '''
-        return [resource.preview()
-                for resource in self.resources.itervalues()]
-
     def create_start(self):
         for res in self.resources.values():
             res.state_set(res.CREATE, res.INIT)
         Stack.process_ready_resources(self.context, stack_id=self.id,
                                       timeout=self.timeout_secs())
-
-    def _adopt_kwargs(self, resource):
-        data = self.adopt_stack_data
-        if not data or not data.get('resources'):
-            return {'resource_data': None}
-
-        return {'resource_data': data['resources'].get(resource.name)}
-
-    @scheduler.wrappertask
-    def stack_task(self, action, reverse=False, post_func=None,
-                   error_wait_time=None,
-                   aggregate_exceptions=False):
-        '''
-        A task to perform an action on the stack and all of the resources
-        in forward or reverse dependency order as specified by reverse
-        '''
-        try:
-            lifecycle_plugin_utils.do_pre_ops(self.context, self,
-                                              None, action)
-        except Exception as e:
-            self.state_set(action, self.FAILED, e.args[0] if e.args else
-                           'Failed stack pre-ops: %s' % six.text_type(e))
-            if callable(post_func):
-                post_func()
-            return
-        self.state_set(action, self.IN_PROGRESS,
-                       'Stack %s started' % action)
-
-        if self.action != self.CREATE:
-            db_api.update_resource_traversal(context=self.context,
-                                             stack_id=self.id,
-                                             status="UNPROCESSED")
-
-        stack_status = self.COMPLETE
-        reason = 'Stack %s completed successfully' % action
-
-        action_task = scheduler.DependencyTaskGroup(
-            self.context,
-            self.id,
-            task=self.converge,
-            reverse=reverse,
-            error_wait_time=error_wait_time,
-            aggregate_exceptions=aggregate_exceptions)
-
-        try:
-            yield action_task()
-        except (exception.ResourceFailure, scheduler.ExceptionGroup) as ex:
-            stack_status = self.FAILED
-            reason = 'Resource %s failed: %s' % (action, six.text_type(ex))
-        except scheduler.Timeout:
-            stack_status = self.FAILED
-            reason = '%s timed out' % action.title()
-
-        self.state_set(action, stack_status, reason)
-
-        if callable(post_func):
-            post_func()
-        lifecycle_plugin_utils.do_post_ops(self.context, self, None, action,
-                                           (self.status == self.FAILED))
 
     @scheduler.wrappertask
     def resource_action(self, r):
@@ -793,48 +688,6 @@ class Stack(collections.Mapping):
             return self.resource_action(res)
         elif self.action == self.DELETE:
             return self.resource_delete(rsrc_name)
-
-    @profiler.trace('Stack.check', hide_args=False)
-    def check(self):
-        self.updated_time = datetime.utcnow()
-        checker = scheduler.TaskRunner(self.stack_task, self.CHECK,
-                                       post_func=self.supports_check_action,
-                                       aggregate_exceptions=True)
-        checker()
-
-    def supports_check_action(self):
-        def is_supported(stack, res):
-            if hasattr(res, 'nested'):
-                return res.nested().supports_check_action()
-            else:
-                return hasattr(res, 'handle_%s' % self.CHECK.lower())
-
-        supported = [is_supported(self, res)
-                     for res in self.resources.values()]
-
-        if not all(supported):
-            msg = ". '%s' not fully supported (see resources)" % self.CHECK
-            reason = self.status_reason + msg
-            self.state_set(self.CHECK, self.status, reason)
-
-        return all(supported)
-
-    @profiler.trace('Stack.adopt', hide_args=False)
-    def adopt(self):
-        '''
-        Adopt a stack (create stack with all the existing resources).
-        '''
-        def rollback():
-            if not self.disable_rollback and self.state == (self.ADOPT,
-                                                            self.FAILED):
-                self.delete(action=self.ROLLBACK)
-
-        creator = scheduler.TaskRunner(
-            self.stack_task,
-            action=self.ADOPT,
-            reverse=False,
-            post_func=rollback)
-        creator(timeout=self.timeout_secs())
 
     @profiler.trace('Stack.update', hide_args=False)
     def update(self, newstack=None, event=None, action=UPDATE):
@@ -1060,87 +913,6 @@ class Stack(collections.Mapping):
                              "%s "), self.id)
             self.id = None
 
-    @profiler.trace('Stack.suspend', hide_args=False)
-    def suspend(self):
-        '''
-        Suspend the stack, which invokes handle_suspend for all stack resources
-        waits for all resources to become SUSPEND_COMPLETE then declares the
-        stack SUSPEND_COMPLETE.
-        Note the default implementation for all resources is to do nothing
-        other than move to SUSPEND_COMPLETE, so the resources must implement
-        handle_suspend for this to have any effect.
-        '''
-        # No need to suspend if the stack has been suspended
-        if self.state == (self.SUSPEND, self.COMPLETE):
-            LOG.info(_LI('%s is already suspended'), six.text_type(self))
-            return
-
-        sus_task = scheduler.TaskRunner(self.stack_task,
-                                        action=self.SUSPEND,
-                                        reverse=True)
-        sus_task(timeout=self.timeout_secs())
-
-    @profiler.trace('Stack.resume', hide_args=False)
-    def resume(self):
-        '''
-        Resume the stack, which invokes handle_resume for all stack resources
-        waits for all resources to become RESUME_COMPLETE then declares the
-        stack RESUME_COMPLETE.
-        Note the default implementation for all resources is to do nothing
-        other than move to RESUME_COMPLETE, so the resources must implement
-        handle_resume for this to have any effect.
-        '''
-        # No need to resume if the stack has been resumed
-        if self.state == (self.RESUME, self.COMPLETE):
-            LOG.info(_LI('%s is already resumed'), six.text_type(self))
-            return
-
-        sus_task = scheduler.TaskRunner(self.stack_task,
-                                        action=self.RESUME,
-                                        reverse=False)
-        sus_task(timeout=self.timeout_secs())
-
-    @profiler.trace('Stack.snapshot', hide_args=False)
-    def snapshot(self):
-        '''Snapshot the stack, invoking handle_snapshot on all resources.'''
-        sus_task = scheduler.TaskRunner(self.stack_task,
-                                        action=self.SNAPSHOT,
-                                        reverse=False)
-        sus_task(timeout=self.timeout_secs())
-
-    @profiler.trace('Stack.delete_snapshot', hide_args=False)
-    def delete_snapshot(self, snapshot):
-        '''Remove a snapshot from the backends.'''
-        for name, rsrc in self.resources.iteritems():
-            data = snapshot.data['resources'].get(name)
-            scheduler.TaskRunner(rsrc.delete_snapshot, data)()
-
-    @profiler.trace('Stack.restore', hide_args=False)
-    def restore(self, snapshot):
-        '''
-        Restore the given snapshot, invoking handle_restore on all resources.
-        '''
-        self.updated_time = datetime.utcnow()
-
-        tmpl = Template(snapshot.data['template'])
-
-        for name, defn in tmpl.resource_definitions(self).iteritems():
-            rsrc = resource.Resource(name, defn, self)
-            data = snapshot.data['resources'].get(name)
-            handle_restore = getattr(rsrc, 'handle_restore', None)
-            if callable(handle_restore):
-                defn = handle_restore(defn, data)
-            tmpl.add_resource(defn, name)
-
-        newstack = self.__class__(self.context, self.name, tmpl, self.env,
-                                  timeout_mins=self.timeout_mins,
-                                  disable_rollback=self.disable_rollback)
-        newstack.parameters.set_stack_id(self.identifier())
-
-        updater = scheduler.TaskRunner(self.update_task, newstack,
-                                       action=self.RESTORE)
-        updater()
-
     @profiler.trace('Stack.output', hide_args=False)
     def output(self, key):
         '''
@@ -1153,45 +925,6 @@ class Stack(collections.Mapping):
             self.outputs[key]['error_msg'] = six.text_type(ex)
             return None
 
-    def restart_resource(self, resource_name):
-        '''
-        stop resource_name and all that depend on it
-        start resource_name and all that depend on it
-        '''
-        deps = self.dependencies[self[resource_name]]
-        failed = False
-
-        for res in reversed(deps):
-            try:
-                scheduler.TaskRunner(res.destroy)()
-            except exception.ResourceFailure as ex:
-                failed = True
-                LOG.error(_LE('Resource %(name)s delete failed: %(ex)s'),
-                          {'name': res.name, 'ex': ex})
-
-        for res in deps:
-            if not failed:
-                try:
-                    res.state_reset()
-                    scheduler.TaskRunner(res.create)()
-                except exception.ResourceFailure as ex:
-                    LOG.exception(_('Resource %(name)s create failed: %(ex)s')
-                                  % {'name': res.name, 'ex': ex})
-                    failed = True
-            else:
-                res.state_set(res.CREATE, res.FAILED,
-                              'Resource restart aborted')
-        # TODO(asalkeld) if any of this fails we Should
-        # restart the whole stack
-
-    def get_availability_zones(self):
-        nova = self.clients.client('nova')
-        if self._zones is None:
-            self._zones = [
-                zone.zoneName for zone in
-                nova.availability_zones.list(detailed=False)]
-        return self._zones
-
     def set_stack_user_project_id(self, project_id):
         self.stack_user_project_id = project_id
         self.store()
@@ -1201,31 +934,6 @@ class Stack(collections.Mapping):
         project_id = self.clients.client(
             'keystone').create_stack_domain_project(self.id)
         self.set_stack_user_project_id(project_id)
-
-    @profiler.trace('Stack.prepare_abandon', hide_args=False)
-    def prepare_abandon(self):
-        return {
-            'name': self.name,
-            'id': self.id,
-            'action': self.action,
-            'environment': self.env.user_env_as_dict(),
-            'status': self.status,
-            'template': self.t.t,
-            'resources': dict((res.name, res.prepare_abandon())
-                              for res in self.resources.values()),
-            'project_id': self.tenant_id,
-            'stack_user_project_id': self.stack_user_project_id
-        }
-
-    def resolve_static_data(self, snippet):
-        return self.t.parse(self, snippet)
-
-    def resolve_runtime_data(self, snippet):
-        """DEPRECATED. Use heat.engine.function.resolve() instead."""
-        warnings.warn('Stack.resolve_runtime_data() is deprecated. '
-                      'Use heat.engine.function.resolve() instead',
-                      DeprecationWarning)
-        return function.resolve(snippet)
 
     def reset_resource_attributes(self):
         # nothing is cached if no resources exist
