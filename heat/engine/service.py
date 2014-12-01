@@ -731,6 +731,8 @@ class EngineService(service.Service):
                     # ROLLBACK is also update
                     stack_obj.pre_update_complete()
                 else:
+                    if stack.status == parser.Stack.GC_IN_PROGRESS:
+                        stack_obj.purge_edges()
                     data = {
                         'status': parser.Stack.COMPLETE,
                         'status_reason': 'Stack %s completed successfully' %
@@ -745,7 +747,7 @@ class EngineService(service.Service):
                         stack.status != parser.Stack.GC_IN_PROGRESS:
             # newer version of resource definition is available
             # Only in case of update_replace GC, we will be working on older resource
-            #TODO: change this logic
+            # TODO: change this logic
             parser.Stack.process_ready_resources(
                 cnxt, stack_id=stack_id,
                 timeout=self.get_stack_timeout_delta(stack))
@@ -759,17 +761,13 @@ class EngineService(service.Service):
         res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id,
                                                     version)
         if stack.status == parser.Stack.FAILED:
+            # an earlier event might have marked stack as failure
             handle_failure()
         else:
             if res.status == resourcem.Resource.COMPLETE:
                 if (stack.status, res.action) == (parser.Stack.GC_IN_PROGRESS,
                                                   resourcem.Resource.DELETE):
                     db_api.resource_delete(cnxt, res.id)
-                    if res_latest.version == version:
-                        # In GC, if the latest version of an resource was deleted,
-                        # Delete edge from resource_graph
-                        db_api.resource_graph_delete_all_edges(cnxt,stack_id,
-                                                               res.name)
                 handle_success()
             else:
                 # Failure scenario

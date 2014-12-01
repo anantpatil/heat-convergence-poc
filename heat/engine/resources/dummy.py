@@ -102,7 +102,6 @@ class Dummy(resource.Resource):
     def validate(self):
         pass
 
-
     def _get_random_sleep_secs(self):
         return random.randint(1, 5)
     

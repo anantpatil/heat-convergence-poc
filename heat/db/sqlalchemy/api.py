@@ -1033,17 +1033,15 @@ def update_resource_traversal(context, stack_id, status, resource_name=None):
     session.flush()
 
 
-def resource_graph_delete_all_edges(context, stack_id, resource_name):
+def resource_graph_delete_all_edges(context, stack_id, res_names):
     session = _session(context)
     with session.begin():
-        session.query(models.ResourceGraph).\
-            filter_by(stack_id=stack_id).\
-            filter(models.ResourceGraph.resource_name == resource_name).\
-            delete()
-        session.query(models.ResourceGraph).\
-            filter_by(stack_id=stack_id).\
-            filter(models.ResourceGraph.needed_by == resource_name).\
-            update({'needed_by': ''})
+        for res_name in res_names:
+            session.query(models.ResourceGraph).\
+                filter_by(stack_id=stack_id).\
+                filter(or_(models.ResourceGraph.resource_name == res_names,
+                        models.ResourceGraph.needed_by == res_names)).\
+                delete()
     session.flush()
 
 

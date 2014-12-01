@@ -169,7 +169,7 @@ GLANCE_BRANCH=${GLANCE_BRANCH:-master}
 #HEAT_REPO=${HEAT_REPO:-${GIT_BASE}/openstack/heat.git}
 #HEAT_BRANCH=${HEAT_BRANCH:-master}
 HEAT_REPO=https://github.com/anantpatil/heat-convergence-poc.git
-HEAT_BRANCH=${HEAT_BRANCH:-master}
+HEAT_BRANCH=${HEAT_BRANCH:-distributed-with-stack-lock}
 
 # django powered web control panel for openstack
 HORIZON_REPO=${HORIZON_REPO:-${GIT_BASE}/openstack/horizon.git}

@@ -1247,3 +1247,17 @@ class Stack(collections.Mapping):
 
         new_stack = Stack(self.context, self.name, raw_template)
         self.update(new_stack, action=self.ROLLBACK)
+
+    def purge_edges(self):
+        """
+        Called in the end to purge the edges from the graph. Edges of the resources 
+        no longer in current stack.
+        """
+        LOG.info("==== Purging the graph...")
+        all_resources = set(db_api.get_all_resources_from_graph(self.context, self.id))
+        LOG.info("==== all resources: %s", str(all_resources))
+        current_resources = set(self.resources.keys())
+        LOG.info("==== current resources: %s", str(current_resources))
+        deleted_resources = all_resources - current_resources
+        LOG.info("==== delete resources: %s", str(deleted_resources))
+        db_api.resource_graph_delete_all_edges(self.context, self.id, deleted_resources)
