@@ -1039,8 +1039,8 @@ def resource_graph_delete_all_edges(context, stack_id, res_names):
         for res_name in res_names:
             session.query(models.ResourceGraph).\
                 filter_by(stack_id=stack_id).\
-                filter(or_(models.ResourceGraph.resource_name == res_names,
-                        models.ResourceGraph.needed_by == res_names)).\
+                filter(or_(models.ResourceGraph.resource_name == res_name,
+                        models.ResourceGraph.needed_by == res_name)).\
                 delete()
     session.flush()
 

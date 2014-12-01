@@ -147,6 +147,9 @@ class Stack(collections.Mapping):
         else:
             self.outputs = {}
 
+    def resolve_static_data(self, snippet):
+        return self.t.parse(self, snippet)
+
     def stored_context(self):
         if self.user_creds_id:
             creds = db_api.user_creds_get(self.user_creds_id)
