@@ -207,6 +207,18 @@ class Template(collections.Mapping):
                             'Found a [%s] instead') % type_res
                 raise exception.StackValidationFailed(message=message)
 
+    def get_streams(self, reverse=False, dirty=False):
+        """
+        Get leaf nodes along with its parent list. parent
+        should have their own immediate dependency list to
+        facilitate aggregator to wait.
+        :param reverse: in case of undo oprtation
+        :param dirty: in case of update
+        :return: list of parents. plural single level parents are
+         represented as tuple.
+        """
+        pass
+
 
 def parse(functions, stack, snippet):
     recurse = functools.partial(parse, functions, stack)

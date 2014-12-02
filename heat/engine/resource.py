@@ -34,12 +34,14 @@ from heat.engine import attributes
 from heat.engine import environment
 from heat.engine import event
 from heat.engine import function
+from heat.engine import lock
 from heat.engine import properties
 from heat.engine import resources
 from heat.engine import rsrc_defn
 from heat.engine import scheduler
 from heat.engine import support
 from heat.openstack.common import log as logging
+from heat.openstack.common import service
 
 cfg.CONF.import_opt('action_retry_limit', 'heat.common.config')
 
@@ -48,6 +50,46 @@ LOG = logging.getLogger(__name__)
 
 def _register_class(resource_type, resource_class):
     resources.global_env().register_class(resource_type, resource_class)
+
+
+class ResourceLock(lock.LockManager):
+    """Resource Lock"""
+    def __init__(self, rsrc_name, stack_id, engine_id):
+        self.engine_id = engine_id
+        name = "%s_%s" % (stack_id, rsrc_name)
+        super(ResourceLock, self).__init__(name, engine_id)
+
+    def try_steal(self, context):
+        if lock.engine_alive(context, self.engine_id):
+            raise exception.ActionInProgress("")
+        self._steal()
+
+    @classmethod
+    def load_from_db(cls, name):
+        rsrc_lock = db_api.lock_get(name)
+        rsrc_name, stack_id = rsrc_lock.name.split('_')
+        return cls(rsrc_name, stack_id, rsrc_lock.data)
+
+    def converged(self):
+        # to be called after convergence is complete
+        # and without direct access to original lock object
+        self._release_lock()
+
+
+class ResourceListener(service.Service):
+    '''
+    Listen on an AMQP queue named for the resource. Allows
+    resource to wait for dependencies to complete.
+    '''
+
+    def __init__(self, host, stack_id, rsrc_id):
+        super(ResourceListener, self).__init__()
+        self.topic = "%s.%s" % (stack_id, rsrc_id)
+        self.host = host
+
+    def start(self):
+        super(ResourceListener, self).start()
+
 
 
 class UpdateReplace(Exception):
@@ -149,7 +191,8 @@ class Resource(object):
 
         return super(Resource, cls).__new__(ResourceClass)
 
-    def __init__(self, name, definition, stack, version=None, load_from_db=False):
+    def __init__(self, name, definition, stack, version=None,
+                 load_from_db=False):
         if '/' in name:
             raise ValueError(_('Resource name may not contain "/"'))
 
@@ -1000,7 +1043,10 @@ class Resource(object):
                     'nova_instance': self.resource_id,
                     'rsrc_defn': rsrc_defn_json,
                     'rsrc_defn_hash': self._frozen_defn.sha1_hash,
-                    'version': self.version})
+                    'version': self.version,
+                    'needed_by': self.needed_by,
+                    'depends_on': self.depends_on
+                })
             except Exception as ex:
                 LOG.error(_LE('DB error %s'), ex)
 

@@ -360,20 +360,3 @@ class Snapshot(BASE, HeatBase):
     status = sqlalchemy.Column('status', sqlalchemy.String(255))
     status_reason = sqlalchemy.Column('status_reason', sqlalchemy.String(255))
     stack = relationship(Stack, backref=backref('snapshot'))
-
-
-class ResourceGraph(BASE, HeatBase):
-    """ Represents a graph of stack resources. """
-    statuses = (PROCESSED, UNPROCESSED, PROCESSING
-                ) = ('PROCESSED', 'UNPROCESSED', 'PROCESSING')
-    __tablename__ = 'resource_graph'
-
-    resource_name = sqlalchemy.Column('resource_name', sqlalchemy.String(255),
-                                      primary_key=True, nullable=False)
-    needed_by = sqlalchemy.Column('needed_by', sqlalchemy.String(255),
-                                  primary_key=True, nullable=True)
-    stack_id = sqlalchemy.Column('stack_id', sqlalchemy.String(36),
-                                 sqlalchemy.ForeignKey('stack.id'),
-                                 primary_key=True,nullable=False)
-    status = sqlalchemy.Column('status', sqlalchemy.String(36),
-                               default=UNPROCESSED)

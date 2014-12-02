@@ -209,6 +209,8 @@ class Stack(collections.Mapping):
         if self._dependencies is None:
             self._dependencies = self._get_dependencies(
                 self.resources.itervalues())
+            #self._load_streams()
+
         return self._dependencies
 
     def get_dependencies_from_template(self):
@@ -226,13 +228,6 @@ class Stack(collections.Mapping):
                 db_api.graph_insert_egde(self.context, value)
         else:
             db_api.graph_insert_egde(self.context, value)
-
-    def store_dependencies(self):
-        deps = self.get_dependencies_from_template()
-        with db_api.transaction(self.context):
-            for res in deps:
-                required_by = [req.name for req in deps.required_by(res)]
-                self._store_edges(res.name, required_by)
 
     def update_dependencies(self):
         new_deps = self.get_dependencies_from_template()
@@ -265,47 +260,6 @@ class Stack(collections.Mapping):
 
                     added_edges = set(new_required_by) - set(old_required_by)
                     self._store_edges(res.name, added_edges)
-
-    @classmethod
-    def process_ready_resources(cls, cnxt, stack_id, ready_nodes=[],
-                                reverse=False, timeout=None):
-        if not ready_nodes:
-            ready_nodes = db_api.get_ready_nodes(context=cnxt,
-                                           stack_id=stack_id,
-                                           reverse=reverse)
-        def converge_resource(rsrc_name):
-            db_api.update_resource_traversal(context=cnxt,
-                                             stack_id=stack_id,
-                                             status='PROCESSING',
-                                             resource_name=rsrc_name)
-            version = Stack.get_converge_resource_version(cnxt, rsrc_name,
-                                                          stack_id)
-
-            rc = rpc_client.EngineClient()
-            if version is not None:
-                rc.converge_resource(cnxt, stack_id, rsrc_name, version=version,
-                                     timeout=timeout)
-
-        def filter_in_progress_nodes():
-            # to avoid processing a resource which is IN_PROGRESS,
-            # return only those resources which are not in IN_PROGRESS.
-            node_dict = dict(ready_nodes)
-            filters = {'status': resource.Resource.IN_PROGRESS}
-            try:
-                resources = db_api.resource_get_all_by_stack(cnxt,
-                                                             stack_id,
-                                                             filters)
-            except exception.NotFound:
-                return ready_nodes
-            nodes = [(name, status)
-                     for name, status in ready_nodes
-                     if name not in resources
-            ]
-            return nodes
-
-        ready_nodes = filter_in_progress_nodes()
-        [converge_resource(rsrc_name) for rsrc_name, status in ready_nodes
-                                                if status == 'UNPROCESSED']
 
     def reset_dependencies(self):
         self._dependencies = None
@@ -417,6 +371,7 @@ class Stack(collections.Mapping):
         }
         if self.id:
             db_api.stack_update(self.context, self.id, s)
+            # TODO: replace with appropriate method
             self.update_dependencies()
         else:
             if not self.user_creds_id:
@@ -434,7 +389,6 @@ class Stack(collections.Mapping):
             new_s = db_api.stack_create(self.context, s)
             self.id = new_s.id
             self.created_time = new_s.created_at
-            self.store_dependencies()
 
         self._set_param_stackid()
 
@@ -671,11 +625,17 @@ class Stack(collections.Mapping):
                                        error_wait_time=ERROR_WAIT_TIME)
         creator(timeout=self.timeout_secs())
 
+    def converge_resource(self, db_rsrc):
+        rc = rpc_client.EngineClient()
+        rc.converge_resource(self.context, self.id, db_rsrc.id,
+                             timeout=self.timeout_secs(),
+                             dependents=db_rsrc.depends_on)
+
     def create_start(self):
+        # persist resources
         for res in self.resources.values():
             res.state_set(res.CREATE, res.INIT)
-        Stack.process_ready_resources(self.context, stack_id=self.id,
-                                      timeout=self.timeout_secs())
+        map(self.converge_resource, self.t.get_streams())
 
     def _adopt_kwargs(self, resource):
         data = self.adopt_stack_data
@@ -778,12 +738,9 @@ class Stack(collections.Mapping):
             rc.notify_resource_observed(cnxt, stack_id, rsrc.name, rsrc.version)
             return
 
-    def resource_action_runner(self, resource_name, version, timeout):
-        db_rsrc = db_api.resource_get_by_name_and_stack(self.context,
-                                                        resource_name,
-                                                        self.id,
-                                                        version)
-        LOG.debug("=====Resource name %s, version %s", resource_name, version)
+    def resource_action_runner(self, rsrc_id, timeout):
+        db_rsrc = db_api.resource_get(self.context, rsrc_id)
+        LOG.debug("=====Resource name %s, version %s", db_rsrc.name, db_rsrc.version)
         rsrc = resource.Resource.load(db_rsrc, self)
         LOG.debug("=====Resource %s", rsrc)
         action_task = scheduler.TaskRunner(

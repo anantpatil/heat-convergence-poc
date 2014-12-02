@@ -1005,42 +1005,16 @@ def resource_exists_in_graph(context, stack_id, resource_name):
     return True if result else False
 
 
-def get_ready_nodes(context, stack_id, reverse):
-    rg = models.ResourceGraph
+def get_leaf_nodes(context, stack_id, reverse):
     if reverse:
-        result = []
-        # Fetch all the nodes which does not have a needed_by
-        nodes_without_needed_by = model_query(context, rg.resource_name, rg.status).\
-                                    filter(rg.status != rg.PROCESSED).\
-                                    filter(rg.stack_id == stack_id).\
-                                    filter(rg.needed_by == '').all()
-        # Fetch all nodes which are processed
-        processed_nodes = [res for (res,) in model_query(context, rg.resource_name).\
-                                                filter(rg.status == rg.PROCESSED).\
-                                                filter(rg.stack_id == stack_id).all()]
-        # Fetch all nodes whose even one needed_by is processed
-        next_nodes = model_query(context, rg.resource_name, rg.status).\
-                        filter(rg.status != rg.PROCESSED).\
-                        filter(rg.stack_id == stack_id).\
-                        filter(rg.needed_by.in_(processed_nodes)).distinct().all()
-
-        # Filter out the nodes for which all needed_by are not processed
-        for node, status in next_nodes:
-            needed_by_nodes = [res for (res,) in model_query(context, rg.needed_by).\
-                                                    filter(rg.resource_name == node).\
-                                                    filter(rg.stack_id == stack_id).all()]
-            if set(needed_by_nodes).issubset(set(processed_nodes)):
-                result.append((node, status))
-        return list(set(result + nodes_without_needed_by))
+        query = model_query(context, models.Resource).\
+            filter_by(stack_id=stack_id).\
+            filter_by(needed_by=None)
     else:
-        query = model_query(context, rg.resource_name, rg.status).\
-                filter(rg.status != rg.PROCESSED).\
-                filter(rg.stack_id == stack_id).\
-                filter(~rg.resource_name.in_(
-                    model_query(context, rg.needed_by).\
-                    filter(rg.status != rg.PROCESSED).\
-                    filter(rg.stack_id == stack_id).subquery()))
-        return query.distinct().all()
+        query = model_query(context, models.Resource).\
+            filter_by(stack_id=stack_id).\
+            filter_by(depends_on=None)
+    return query.all()
 
 
 def update_resource_traversal(context, stack_id, status, resource_name=None):
@@ -1077,3 +1051,26 @@ def get_all_resources_from_graph(context, stack_id):
     result = model_query(context, models.ResourceGraph.resource_name).filter_by(
                             stack_id=stack_id).distinct().all()
     return [res for (res,) in result]
+
+
+def lock_get(name):
+    query = model_query(None, models.GenericLock).filter_by(name)
+    return query.first()
+
+
+def lock_create(value):
+    try:
+        obj_ref = models.GenericLock()
+        obj_ref.update(value)
+        obj_ref.save(get_session())
+        return obj_ref
+    except sqlalchemy.exc.IntegrityError:
+        raise exception.AcquireLockFailed
+
+
+def lock_release(name):
+    session = get_session()
+    rows_affected = session.query(models.GenericLock).filter_by(name).\
+        delete()
+    if not rows_affected:
+        return True

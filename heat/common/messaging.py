@@ -110,11 +110,11 @@ def cleanup():
         TRANSPORT = NOTIFIER = None
 
 
-def get_rpc_server(target, endpoint):
+def get_rpc_server(target, endpoint, executor='eventlet'):
     """Return a configured oslo.messaging rpc server."""
     serializer = RequestContextSerializer(JsonPayloadSerializer())
     return oslo.messaging.get_rpc_server(TRANSPORT, target, [endpoint],
-                                         executor='eventlet',
+                                         executor=executor,
                                          serializer=serializer)
 
 

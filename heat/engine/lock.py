@@ -14,18 +14,29 @@
 import datetime
 import eventlet
 
+from oslo.config import cfg
+from oslo import messaging
 
 from heat.common import exception
-
+from heat.common import messaging as rpc_messaging
 from heat.db import api as db_api
 from heat.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
 
+def engine_alive(context, engine_id):
+    client = rpc_messaging.get_rpc_client(version='1.0', topic=engine_id)
+    client_context = client.prepare(
+        timeout=cfg.CONF.engine_life_check_timeout)
+    try:
+        return client_context.call(context, 'listening')
+    except messaging.MessagingTimeout:
+        return False
+
+
 class LockManager(object):
-    def __init__(self, context, name, data):
-        self.context = context
+    def __init__(self, name, data):
         self.name = name
         self.data = data
         self.lock = None
@@ -47,7 +58,7 @@ class LockManager(object):
 
     def acquire(self):
         """Acquire a general lock """
-        self.lock = db_api.lock_create(self.context, self.name, self.data)
+        self.lock = db_api.lock_create(self.name, self.data)
         if not self.lock:
             raise exception.AcquireLockFailed()
 
@@ -55,12 +66,16 @@ class LockManager(object):
         """Release a stack lock."""
         if self.lock:
             self.lock = None
-            db_api.lock_release(self.name)
+            self._release_lock()
         else:
             raise exception.ReleaseLockFailed(self.name)
+
+    def _release_lock(self):
+        db_api.lock_release(self.name)
 
     def try_steal(self):
         raise NotImplemented()
 
     def _steal(self):
+        # TODO: delete and reinsert to avoid contention
         self.lock = db_api.lock_update(self.name, self.data)
