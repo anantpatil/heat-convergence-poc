@@ -14,16 +14,12 @@
 import collections
 import functools
 import json
-import os
 
 import datetime
 import eventlet
 from oslo.config import cfg
 from oslo import messaging
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
 from osprofiler import profiler
-import requests
 import six
 import warnings
 import webob
@@ -31,14 +27,12 @@ import webob
 from heat.common import context
 from heat.common import exception
 from heat.common.i18n import _
-from heat.common.i18n import _LE
 from heat.common.i18n import _LI
 from heat.common.i18n import _LW
 from heat.common import identifier
 from heat.common import messaging as rpc_messaging
 from heat.db import api as db_api
 from heat.engine import api
-from heat.engine import attributes
 from heat.engine import clients
 from heat.engine import environment
 from heat.engine.event import Event
@@ -498,68 +492,13 @@ class EngineService(service.Service):
         stack.validate()
         return stack
 
-    @request_context
-    def preview_stack(self, cnxt, stack_name, template, params, files, args):
-        """
-        Simulates a new stack using the provided template.
-
-        Note that at this stage the template has already been fetched from the
-        heat-api process if using a template-url.
-
-        :param cnxt: RPC context.
-        :param stack_name: Name of the stack you want to create.
-        :param template: Template of stack you want to create.
-        :param params: Stack Input Params
-        :param files: Files referenced from the template
-        :param args: Request parameters/args passed from API
-        """
-
-        LOG.info(_LI('previewing stack %s'), stack_name)
-        stack = self._parse_template_and_validate_stack(cnxt,
-                                                        stack_name,
-                                                        template,
-                                                        params,
-                                                        files,
-                                                        args)
-
-        return api.format_stack_preview(stack)
-
-
-    @request_context
-    def converge_resource(self, cnxt, stack_id, name, version, timeout):
-        stack = parser.Stack.load(cnxt, stack_id)
-        # TODO remove check_create_complete from resource_action
-        try:
-            stack.resource_action_runner(name, version, timeout)
-        except Exception as e:
-            stack.state_set(stack.action, stack.FAILED, e.args[0] if e.args
-                            else 'Failed stack pre-ops: %s' % six.text_type(e))
-        # notify Engine to converge
-        # TODO notify observer to check_create_complete once observer 
-        # code is ready.
-        stack.rpc_client.notify_resource_observed(cnxt, stack_id, name, version)
-
-
-    def _get_stack_timeout_delta(self, stack):
-        if stack.action == parser.Stack.CREATE:
-            start_time = stack.created_at
-        elif stack.action == parser.Stack.DELETE:
-            # by default 60 mins
-            return 3600
-        else:
-            start_time = stack.updated_at
-        current_time = datetime.datetime.now().replace(microsecond=0)
-        delta = current_time - start_time
-        timeout = stack.timeout if stack.timeout else cfg.CONF.stack_action_timeout
-        delta_timeout = (timeout * 60) - delta.seconds
-        return delta_timeout
-
-    def _spin_wait_acquire_lock(self, cnxt, stack):
-        timeout = self._get_stack_timeout_delta(stack)
+    def _spin_wait_acquire_lock_or_timeout(self, cnxt, stack):
+        timeout = stack._get_remaining_timeout_secs()
         lock = stack_lock.StackLock(cnxt, stack, self.engine_id)
         start_time = datetime.datetime.now().replace(microsecond=0)
         current_time = datetime.datetime.now().replace(microsecond=0)
         while current_time - start_time <= datetime.timedelta(seconds=timeout):
+            LOG.debug("==== Spin waiting for lock...")
             acquired_lock = lock.try_acquire()
             if acquired_lock is None:
                 return lock
@@ -568,117 +507,27 @@ class EngineService(service.Service):
                 current_time = datetime.datetime.now().replace(microsecond=0)
         return
 
-    def _handle_stack_timeout(self, stack):
-        values = {
-            'status': parser.Stack.FAILED,
-            'status_reason': 'stack timed-out'
-        }
-        db_api.stack_update(stack.context, stack.id, values)
+    def _handle_resource_notif(self, context, request_id, stack_id,
+                               resource_id, convg_status):
+        stack = parser.Stack.load(context, stack_id=stack_id)
+        lock = self._spin_wait_acquire_lock_or_timeout(context, stack)
+        if not lock:
+            stack.handle_timeout()
+        stack.process_resource_notif(request_id, resource_id, convg_status)
 
     @request_context
-    def notify_resource_observed(self, cnxt, stack_id, name, version):
-        stack = db_api.stack_get(cnxt, stack_id)
-        lock = self._spin_wait_acquire_lock(cnxt, stack)
-        if lock:
-            self.thread_group_mgr.start_with_acquired_lock(
-                stack, lock,  self.handle_resource_notif, cnxt, name, stack,
-                version)
-        else:
-            # stack timedout
-            self._handle_stack_timeout(stack)
+    def converge_resource(self, context, request_id, stack_id, resource_id, timeout):
+        stack = parser.Stack.load(context, stack_id=stack_id)
+        self.thread_group_mgr.start(context, stack_id, stack.do_converge,
+                                    request_id, resource_id, timeout)
 
-    def handle_resource_notif(self, cnxt, name, stack, version):
-        def filter_nodes(nodes, status):
-            return filter(lambda (res_name, res_status): res_status == status, nodes)
-
-        def handle_failure():
-            nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
-            processing_nodes = filter_nodes(nodes, 'PROCESSING')
-            if not processing_nodes:
-                # Rollback = True and action is CREATE/UPDATE
-                if (not stack.disable_rollback and
-                        stack.action in (parser.Stack.CREATE, parser.Stack.UPDATE)):
-                    current_stack = parser.Stack.load(cnxt, stack_id)
-                    current_stack.rollback()
-                else:
-                    # No rollback, Do nothing
-                    pass
-            else:
-                # Ignore notification. Wait for others to complete
-                pass
-
-        def handle_success():
-            if stack.status == parser.Stack.FAILED:
-                # some earlier event marked this as failed, don't proceed
-                return
-            delta_timeout = self._get_stack_timeout_delta(stack)
-            nodes = db_api.get_ready_nodes(cnxt, stack_id, reverse)
-            ready_nodes = filter_nodes(nodes, 'UNPROCESSED')
-            if ready_nodes:
-                parser.Stack.process_ready_resources(cnxt, stack_id,
-                                                     ready_nodes,
-                                                     reverse=reverse,
-                                                     timeout=delta_timeout)
-            else:
-                in_progress_nodes = filter_nodes(nodes, 'PROCESSING')
-                if in_progress_nodes:
-                    # There are still nodes under process, wait for notification from them
-                    return
-                # Call DB methods based on the action
-                stack_obj = parser.Stack.load(cnxt, stack_id)
-                if stack.action == parser.Stack.DELETE:
-                    stack_obj.delete_complete()
-                elif stack.action in (parser.Stack.UPDATE, parser.Stack.ROLLBACK) and \
-                                stack.status == parser.Stack.IN_PROGRESS:
-                    # ROLLBACK is also update
-                    stack_obj.pre_update_complete()
-                else:
-                    if stack.status == parser.Stack.GC_IN_PROGRESS:
-                        stack_obj.purge_edges()
-                    data = {
-                        'status': parser.Stack.COMPLETE,
-                        'status_reason': 'Stack %s completed successfully' %
-                                         stack.action
-                    }
-                    db_api.stack_update(cnxt, stack_id, data)
-
-        stack_id = stack.id
-        # check if a newer version of resource is available.
-        res_latest = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id)
-        if res_latest.version > version and \
-                        stack.status != parser.Stack.GC_IN_PROGRESS:
-            # newer version of resource definition is available
-            # Only in case of update_replace GC, we will be working on older resource
-            # TODO: change this logic
-            parser.Stack.process_ready_resources(
-                cnxt, stack_id=stack_id,
-                timeout=self.get_stack_timeout_delta(stack))
-            return
-        reverse_actions = [parser.Stack.DELETE, parser.Stack.ROLLBACK]
-        reverse = True if stack.action in reverse_actions or (
-                            stack.action, stack.status) == (
-                            parser.Stack.UPDATE, parser.Stack.GC_IN_PROGRESS) \
-                            else False
-        db_api.update_resource_traversal(cnxt, stack_id, 'PROCESSED', name)
-        res = db_api.resource_get_by_name_and_stack(cnxt, name, stack_id,
-                                                    version)
-        if stack.status == parser.Stack.FAILED:
-            # an earlier event might have marked stack as failure
-            handle_failure()
-        else:
-            if res.status == resourcem.Resource.COMPLETE:
-                if (stack.status, res.action) == (parser.Stack.GC_IN_PROGRESS,
-                                                  resourcem.Resource.DELETE):
-                    db_api.resource_delete(cnxt, res.id)
-                handle_success()
-            else:
-                # Failure scenario
-                values = {
-                    'status': parser.Stack.FAILED,
-                    'status_reason': res.status_reason
-                }
-                db_api.stack_update(cnxt, stack_id, values)
-                handle_failure()
+    @request_context
+    def notify_resource_observed(self, context, request_id, stack_id,
+                                 resource_id, convg_status):
+        # Just launch in a thread.
+        # simply start a new thread with handle_resouce_notif as func
+        self.thread_group_mgr.start(context, stack_id, self._handle_resource_notif,
+                                    context, request_id, stack_id, resource_id, convg_status)
 
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,

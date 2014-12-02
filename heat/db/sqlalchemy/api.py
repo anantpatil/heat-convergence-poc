@@ -342,6 +342,16 @@ def stack_get(context, stack_id, show_deleted=False, tenant_safe=True,
     return result
 
 
+def stack_get_by_request_id(context, request_id, eager_load=False):
+    query = model_query(context, models.Stack).filter_by(req_id=request_id)
+
+    if eager_load:
+        query = query.options(orm.joinedload("raw_template"))
+    result = query.first()
+
+    return result
+
+
 def stack_get_all_by_owner_id(context, owner_id):
     results = soft_delete_aware_query(context, models.Stack).\
         filter_by(owner_id=owner_id).all()

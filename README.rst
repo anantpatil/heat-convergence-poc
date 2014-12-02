@@ -55,13 +55,23 @@ resource.py has most of the changes and almost re-written.
 TODO
 ~~~~
 * Clean up all the not needed code for PoC.
-* Add resource incrementally as they are taken up for converging.
-* Handle updates with no updates in it.
+* Add resource incrementally as they are taken up for convergence.
+* Handle updates with no actual resource updates in it.
 * Test concurrent update.
 * Test rollback with concurrent update.
 * Only load the resource and its children to while updating frozen
   resource definition in DB.
 * SCHEDULED status of resource to take care of updates while resource is
-  in transit to worker back and forth.
+  in transit to worker back and forth.(Done)
 * Each update generates an new unique req_id. Workers panic after seeing
-  new req_id and result in noop.
+  new req_id and result in noop. (Done)
+* Each notification and converge request should immedeatly spawn an
+  eventlet thread to process the request, not blocking the RPC initi
+  thread. This is required as the RPC is cast and not call.(Done)
+* Remove stack lock and use DB tranasctions.
+* If an update is issued while update in progress, update the graph and
+  wait for notifications from worker for previous jobs. Trigger the next
+  set of jobs then, after recieving the notifications instead of
+  triggering right away.
+* Rollback should look back, at older versions, instead of blindly
+  issuing another update.

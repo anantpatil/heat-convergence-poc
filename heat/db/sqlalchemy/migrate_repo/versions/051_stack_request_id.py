@@ -19,8 +19,8 @@ def upgrade(migrate_engine):
 
     stack = sqlalchemy.Table('stack', meta, autoload=True)
     req_id = sqlalchemy.Column('req_id', sqlalchemy.String(36),
-                               nullable=False, unique=True)
-    req_id.create(stack, unique_name='req_id')
+                               nullable=False)
+    req_id.create(stack)
 
     resource = sqlalchemy.Table('resource', meta, autoload=True)
     engine_id = sqlalchemy.Column('engine_id', sqlalchemy.String(36))

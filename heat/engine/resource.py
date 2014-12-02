@@ -82,8 +82,8 @@ class Resource(object):
         'SUSPEND', 'RESUME', 'ADOPT', 'SNAPSHOT', 'CHECK',
     )
 
-    STATUSES = (INIT, IN_PROGRESS, FAILED, COMPLETE
-                ) = ('INIT', 'IN_PROGRESS', 'FAILED', 'COMPLETE')
+    STATUSES = (INIT, IN_PROGRESS, FAILED, COMPLETE, SCHEDULED
+                ) = ('INIT', 'IN_PROGRESS', 'FAILED', 'COMPLETE', 'SCHEDULED')
 
     # If True, this resource must be created before it can be referenced.
     strict_dependency = True
@@ -197,6 +197,12 @@ class Resource(object):
         res = cls(db_resource.name, r_defn, stack)
         res.load_data(db_resource)
         return res
+
+    @classmethod
+    def load_all_versions(cls, context, name, stack):
+        all_versions = db_api.resource_get_all_versions_by_name_and_stack(
+            context, name, stack.id)
+        return [Resource.load(db_res, stack) for db_res in all_versions]
 
     def load_data(self, resource):
         '''Load the resource state from its DB representation.'''
@@ -1008,8 +1014,11 @@ class Resource(object):
         # all other transitions (other than to DELETE_COMPLETE)
         # should be handled by the update_and_save above..
         elif (action, status) in [(self.CREATE, self.INIT),
+                                  (self.CREATE, self.SCHEDULED),
                                   (self.CREATE, self.IN_PROGRESS),
+                                  (self.UPDATE, self.SCHEDULED),
                                   (self.ADOPT, self.IN_PROGRESS),
+                                  (self.DELETE, self.SCHEDULED),
                                   (self.DELETE, self.INIT)]:
             self._store()
 

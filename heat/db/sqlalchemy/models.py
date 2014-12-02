@@ -144,7 +144,7 @@ class Stack(BASE, HeatBase, SoftDelete, StateAware):
     # created/modified. (bug #1193269)
     updated_at = sqlalchemy.Column(sqlalchemy.DateTime)
     req_id = sqlalchemy.Column(sqlalchemy.String(36), nullable=False,
-                               unique=True, default=lambda: str(uuid.uuid4()))
+                               default=lambda: str(uuid.uuid4()))
 
 class StackLock(BASE, HeatBase):
     """Store stack locks for deployments with multiple-engines."""
