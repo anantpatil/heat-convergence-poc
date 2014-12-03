@@ -40,10 +40,10 @@ class Dummy(resource.Resource):
 
     PROPERTIES = (
         LENGTH, SEQUENCE, CHARACTER_CLASSES, CHARACTER_SEQUENCES,
-        SALT, UPDATE_IN_PLACE_PROP, FAIL_PROP
+        SALT, UPDATE_IN_PLACE_PROP, FAIL_PROP, MAX_WAIT_SECS
     ) = (
         'name_len', 'sequence', 'character_classes', 'character_sequences',
-        'salt', 'update_in_place_prop', 'fail_prop',
+        'salt', 'update_in_place_prop', 'fail_prop', 'max_wait_secs'
     )
 
     _CHARACTER_CLASSES_KEYS = (
@@ -165,6 +165,12 @@ class Dummy(resource.Resource):
             _('Value which can be set for resource to fail to test failure'
               'scenarios.'),
             default='no',
+        ),
+        MAX_WAIT_SECS: properties.Schema(
+            properties.Schema.NUMBER,
+            _('Value which can be set for resource to wait after an action '
+              'is performed.'),
+            default=6,
         ),
     }
 
@@ -292,7 +298,7 @@ class Dummy(resource.Resource):
         self.resource_id_set(random_string)
         
         # sleep for random time 
-        sleep_secs = random.randint(0, 6)
+        sleep_secs = random.uniform(0, self.properties.get(self.MAX_WAIT_SECS))
         LOG.debug("Resource %s sleeping for %s seconds", self.name, sleep_secs)
         eventlet.sleep(sleep_secs)
        
@@ -302,7 +308,7 @@ class Dummy(resource.Resource):
             
     def handle_update(self, json_snippet=None, tmpl_diff=None, prop_diff=None):
         fail_prop = self.properties.get(self.FAIL_PROP)
-        sleep_secs = random.randint(0, 6)
+        sleep_secs = random.uniform(0, self.properties.get(self.MAX_WAIT_SECS))
         LOG.debug("Update of Resource %s sleeping for %s seconds", self.name, sleep_secs)
         eventlet.sleep(sleep_secs)
        
@@ -311,7 +317,7 @@ class Dummy(resource.Resource):
             raise Exception("Dummy failed %s", self.name)
         
     def handle_delete(self):
-        sleep_secs = random.randint(0, 6)
+        sleep_secs = random.uniform(0, self.properties.get(self.MAX_WAIT_SECS))
         LOG.debug("Delete of Resource %s sleeping for %s seconds", self.name, sleep_secs)
         eventlet.sleep(sleep_secs)
 
