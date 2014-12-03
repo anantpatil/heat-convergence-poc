@@ -492,25 +492,29 @@ class EngineService(service.Service):
         stack.validate()
         return stack
 
-    def _spin_wait_acquire_lock_or_timeout(self, cnxt, stack):
+    @staticmethod
+    def _spin_wait_acquire_lock_or_timeout(engine_id, context, stack):
         timeout = stack._get_remaining_timeout_secs()
-        lock = stack_lock.StackLock(cnxt, stack, self.engine_id)
+        lock = stack_lock.StackLock(context, stack, engine_id)
         start_time = datetime.datetime.now().replace(microsecond=0)
         current_time = datetime.datetime.now().replace(microsecond=0)
         while current_time - start_time <= datetime.timedelta(seconds=timeout):
             LOG.debug("==== Spin waiting for lock...")
             acquired_lock = lock.try_acquire()
             if acquired_lock is None:
+                LOG.debug("==== acquired lock...")
                 return lock
             else:
                 eventlet.sleep(0.5)
                 current_time = datetime.datetime.now().replace(microsecond=0)
         return
 
-    def _handle_resource_notif(self, context, request_id, stack_id,
+    @staticmethod
+    def _handle_resource_notif(engine_id, context, request_id, stack_id,
                                resource_id, convg_status):
         stack = parser.Stack.load(context, stack_id=stack_id)
-        lock = self._spin_wait_acquire_lock_or_timeout(context, stack)
+        lock = EngineService._spin_wait_acquire_lock_or_timeout(engine_id, context,
+                                                       stack)
         if not lock:
             stack.handle_timeout()
         try:
@@ -531,7 +535,8 @@ class EngineService(service.Service):
         # Just launch in a thread.
         # simply start a new thread with handle_resouce_notif as func
         self.thread_group_mgr.start(stack_id, self._handle_resource_notif,
-                                    context, request_id, stack_id, resource_id, convg_status)
+                                    self.engine_id, context, request_id,
+                                    stack_id, resource_id, convg_status)
 
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
@@ -581,6 +586,19 @@ class EngineService(service.Service):
                                               _stack_create, stack)
 
         return dict(stack.identifier())
+
+    @staticmethod
+    def _start_update_with_lock(engine_id, context, stack, updated_stack,
+                                event=None):
+        lock = EngineService._spin_wait_acquire_lock_or_timeout(engine_id,
+                                                                context,
+                                                                stack)
+        if not lock:
+            stack.handle_timeout()
+        try:
+            stack.update(updated_stack, event=event)
+        finally:
+            lock.release(stack.id)
 
     @request_context
     def update_stack(self, cnxt, stack_identity, template, params,
@@ -643,11 +661,13 @@ class EngineService(service.Service):
         updated_stack.validate()
 
         event = eventlet.event.Event()
-        th = self.thread_group_mgr.start_with_lock(cnxt, current_stack,
-                                                   self.engine_id,
-                                                   current_stack.update,
-                                                   updated_stack,
-                                                   event=event)
+
+        th = self.thread_group_mgr.start(current_stack.id,
+                                         self._start_update_with_lock,
+                                         self.engine_id, context,
+                                         current_stack, updated_stack,
+                                         event=event)
+
         th.link(self.thread_group_mgr.remove_event, current_stack.id, event)
         self.thread_group_mgr.add_event(current_stack.id, event)
         return dict(current_stack.identifier())
