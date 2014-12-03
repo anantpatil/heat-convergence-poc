@@ -1,0 +1,35 @@
+heat_template_version: 2013-05-23
+description: Random String templates
+
+parameters:
+    len:
+        type: string
+        default: 16
+
+resources:
+    A:
+        type: OS::Heat::Dummy
+        properties:
+            name_len: {get_param: len}
+
+    B:
+        type: OS::Heat::Dummy
+        properties:
+            name_len: 32
+
+    C:
+        type: OS::Heat::Dummy
+        depends_on: [A, B]
+        properties:
+            name_len: 64
+    D:
+        type: OS::Heat::Dummy
+        depends_on: C
+        properties:
+            name_len: {get_param: len}
+
+    E:
+        type: OS::Heat::Dummy
+        depends_on: C
+        properties:
+            name_len: 32

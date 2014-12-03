@@ -312,7 +312,7 @@ class Stack(collections.Mapping):
                 res.store_update(res.DELETE, res.SCHEDULED,
                                  "Scheduled for deletion")
                 self.rpc_client.converge_resource(
-                    self.context, self.id, self.request_id, res.id,
+                    self.context, self.request_id, self.id, res.id,
                     self._get_remaining_timeout_secs())
             else:
                 db_api.resource_delete(self.context, res.id)
@@ -361,13 +361,19 @@ class Stack(collections.Mapping):
             raise Exception("Stack %s in unknown state: %s, %s", self.name,
                             self.action, self.status)
 
+        #TODO: better way to update traversal information in DB using SQL
+        for res_name, status in ready_nodes:
+            db_api.update_resource_traversal(self.context, self.id,
+                                             'PROCESSING',
+                                             resource_name=res_name)
+
     def _trigger_GC(self):
         self.state_set(self.action, self.GC_IN_PROGRESS)
         db_api.update_resource_traversal(self.context, self.id, 'UNPROCESSED')
         self._trigger_convergence()
 
     def _handle_stack_action_complete(self):
-        reason = "%s complete", self.action
+        reason = "%s complete" % self.action
         if (self.action, self.status) in ((self.UPDATE, self.IN_PROGRESS),
                                           (self.ROLLBACK, self.IN_PROGRESS)):
             self._trigger_GC()
@@ -888,24 +894,10 @@ class Stack(collections.Mapping):
         self.state_set(action, self.IN_PROGRESS, 'Stack %s started' %
                        action)
 
-        for res_name in db_api.get_all_resources_from_graph(self.context, self.id):
-            db_res = db_api.resource_get_by_name_and_stack(context=self.context,
-                                                            resource_name=res_name,
-                                                            stack_id=self.id)
-            if db_res:
-                res_obj = resource.Resource.load(db_res, self)
-                res_obj.state_set(res_obj.DELETE, res_obj.INIT)
-
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.id,
                                          status="UNPROCESSED")
-
-        snapshots = db_api.snapshot_get_all(self.context, self.id)
-        for snapshot in snapshots:
-            self.delete_snapshot(snapshot)
-
-        Stack.process_ready_resources(self.context, stack_id=self.id,
-                                     reverse=True, timeout=self.timeout_secs())
+        self._trigger_convergence()
 
     def delete_complete(self, abandon=False):
         #(TODO) : Handle failure
@@ -1141,6 +1133,7 @@ class Stack(collections.Mapping):
         try:
             self.resource_action_runner(resource_id, timeout)
         except Exception as e:
+            LOG.exception(e)
             # Don't set the stack state here
             self.rpc_client.notify_resource_observed(self.context, request_id,
                                                       self.id, resource_id,
