@@ -190,6 +190,9 @@ class Resource(object):
             if db_resource:
                 self.load_data(db_resource)
 
+    def copy(self):
+        return Resource(self.name, self.t, self.stack, load_from_db=True)
+
     @classmethod
     def load(cls, db_resource, stack):
         r_defn = rsrc_defn.ResourceDefinition.from_json(
@@ -562,7 +565,8 @@ class Resource(object):
         to customise creation.
         '''
         action = self.CREATE
-        if (self.action, self.status) != (self.CREATE, self.INIT):
+        if (self.action, self.status) not in ((self.CREATE, self.INIT),
+                                              (self.CREATE, self.SCHEDULED)):
             exc = exception.Error(_('State %s invalid for create')
                                   % six.text_type(self.state))
             raise exception.ResourceFailure(exc, self, action)
@@ -688,14 +692,25 @@ class Resource(object):
         except ValueError:
             return True
 
-    def needs_update(self, before):
-        assert isinstance(before, rsrc_defn.ResourceDefinition)
-        after = self.frozen_definition()
+    def needs_update(self, after):
+        assert isinstance(after, rsrc_defn.ResourceDefinition)
+        before = self.frozen_definition()
         before_props = before.properties(self.properties_schema,
                                          self.context)
         after_props = after.properties(self.properties_schema,
                                        self.context)
         return self._needs_update(after, before, after_props, before_props, None)
+
+    def _move_resource_id_to_new_version(self, new_res):
+        pass
+
+    @scheduler.wrappertask
+    def _replace(self, new_res):
+        LOG.debug("==== Replacing res %s with entirely new resource" % self.name)
+        new_res.action = Resource.CREATE
+        new_res.status = Resource.INIT
+        new_res.store_update(new_res.action, new_res.status, "Replacing resource")
+        yield new_res.create()
 
     @scheduler.wrappertask
     def update(self):
@@ -704,23 +719,14 @@ class Resource(object):
         db_resource = db_api.resource_get_by_name_and_stack(self.context,
                                                             self.name,
                                                             self.stack.id,
-                                                            version=self.version - 1)
-        old_resource = Resource.load(db_resource, self.stack)
+                                                            version=self.version + 1)
+        new_res = Resource.load(db_resource, self.stack)
         try:
-            yield self.do_update(self._frozen_defn, old_resource._frozen_defn)
+            yield self.do_update(new_res._frozen_defn)
+            self._move_resource_id_to_new_version(new_res)
         except UpdateReplace:
             # Resource does not support in-place update, create a new one.
-            self.action = Resource.CREATE
-            self.status = Resource.INIT
-            self.store_update(self.action, self.status, "Create new resource")
-            # Move the phy resource id to old resource
-            old_resource.resource_id = self.resource_id
-            old_resource.action = self.DELETE
-            old_resource.status = self.INIT
-            old_resource.store_update(
-                old_resource.action, old_resource.status,
-                "Remove nova_instance from old resource version")
-            yield self.create()
+            yield self._replace_resource(new_res)
 
     @scheduler.wrappertask
     def do_update(self, after, before=None, prev_resource=None):

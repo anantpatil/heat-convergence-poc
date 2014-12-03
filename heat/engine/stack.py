@@ -12,6 +12,7 @@
 #    under the License.
 
 import collections
+import copy
 from oslo.utils import timeutils
 import re
 
@@ -20,7 +21,6 @@ from oslo.utils import encodeutils
 from osprofiler import profiler
 import six
 import json
-import uuid
 
 from heat.common import context as common_context
 from heat.common import exception
@@ -71,6 +71,9 @@ class Stack(collections.Mapping):
 
     CONVG_STATUS = (CONVG_OK, CONVG_PANIC, CONVG_FAILED) \
         = ('CONVG_OK', 'CONVG_PANIC', 'CONVG_FAILED')
+
+    GRAPH_TRAVERSAL_STATUS = (UNPROCESSED, PROCESSING, PROCESSED, DEFERRED_DELETE) \
+        = ('UNPROCESSED', 'PROCESSING', 'PROCESSED', 'DEFERRED_DELETE')
 
     _zones = None
 
@@ -284,6 +287,21 @@ class Stack(collections.Mapping):
                     added_edges = set(new_required_by) - set(old_required_by)
                     self._store_edges(res.name, added_edges)
 
+    def _create_delete_version(self, res):
+        del_res = copy.copy(res)
+        del_res.store_update(res.DELETE, res.INIT, "Marked for deletion")
+
+        res.resource_id = None
+        res.store_update(res.action, res.status, "Removed physical id for deletion")
+
+    def _create_update_version(self, new_res, old_res):
+        new_res.version = old_res.version + 1
+        if old_res.action == old_res.DELETE:
+            # if the resource was scheduled for deletion, create
+            new_res.action = new_res.CREATE
+        new_res.status = new_res.SCHEDULED
+        new_res.store()
+
     def _schedule_create_job(self, res_name):
         res = resource.Resource(res_name, self.resource_definitions[res_name],
                                 self)
@@ -291,9 +309,42 @@ class Stack(collections.Mapping):
         self.rpc_client.converge_resource(self.context, self.request_id,
                                           self.id, res.id,
                                           self._get_remaining_timeout_secs())
+        self._mark_res_as_scheduled(res_name)
+
+    def _resource_exists_in_current_template(self, res_name):
+        return self.resource_definitions.has_key(res_name)
 
     def _schedule_update_job_if_needed(self, res_name):
-        pass
+        db_res = db_api.resource_get_by_name_and_stack(self.context,
+                                                       res_name,
+                                                       self.id)
+        old_res = None
+        if db_res:
+            old_res = resource.Resource.load(db_res, self)
+
+        if self._resource_exists_in_current_template(res_name):
+            new_res_defn = self.resource_definitions[res_name]
+            new_res = resource.Resource(res_name, new_res_defn, self)
+            if old_res:
+                if old_res.needs_update(new_res.t):
+                    self._create_update_version(new_res, old_res)
+                    self.rpc_client.converge_resource(
+                        self.context, self.request_id, self.id, old_res.id,
+                        self._get_remaining_timeout_secs())
+                    self._mark_res_as_scheduled(res_name)
+                else:
+                    # Nothing needs to be done
+                    self._mark_res_as_done(res_name)
+            else:
+                new_res.state_set(new_res.CREATE, new_res.SCHEDULED)
+                self.rpc_client.converge_resource(
+                    self.context, self.request_id, self.id, new_res.id,
+                    self._get_remaining_timeout_secs())
+                self._mark_res_as_scheduled(res_name)
+        else:
+            if old_res:
+                self._create_delete_version(old_res)
+                self._mark_res_for_deferred_delete(res_name)
 
     def _schedule_rollback_job_if_needed(self, res_name):
         """
@@ -306,16 +357,33 @@ class Stack(collections.Mapping):
 
     def _schedule_delete_job(self, res_name):
         all_versions = resource.Resource.load_all_versions(self.context,
-                                                               res_name, self)
+                                                           res_name,
+                                                           self)
         for res in all_versions:
             if res.resource_id:
                 res.store_update(res.DELETE, res.SCHEDULED,
                                  "Scheduled for deletion")
                 self.rpc_client.converge_resource(
-                    self.context, self.id, self.request_id, res.id,
+                    self.context, self.request_id, self.id, res.id,
                     self._get_remaining_timeout_secs())
+                self._mark_res_as_scheduled(res_name)
             else:
                 db_api.resource_delete(self.context, res.id)
+
+    def _mark_res_as_scheduled(self, res_name):
+        db_api.update_resource_traversal(self.context, self.id,
+                                         self.PROCESSING,
+                                         resource_name=res_name)
+
+    def _mark_res_as_done(self, res_name):
+        db_api.update_resource_traversal(self.context, self.id,
+                                         self.PROCESSED,
+                                         resource_name=res_name)
+
+    def _mark_res_for_deferred_delete(self, res_name):
+        db_api.update_resource_traversal(self.context, self.id,
+                                         self.DEFERRED_DELETE,
+                                         resource_name=res_name)
 
     def _filter_nodes_with_previous_version_scheduled(self, ready_nodes):
         # to avoid processing a resource having its older version in in progress
@@ -342,8 +410,8 @@ class Stack(collections.Mapping):
         return nodes
 
     def _graph_traversal_complete(self, ready_nodes):
-        resources_in_progress =  self._get_nodes_matching_status(ready_nodes,
-                                                                 'PROCESSING')
+        resources_in_progress =  self._get_nodes_matching_status(
+            ready_nodes, self.PROCESSING)
         return resources_in_progress is None or len(resources_in_progress) == 0
 
     def _schedule_convg_jobs(self, ready_nodes):
@@ -361,21 +429,23 @@ class Stack(collections.Mapping):
             raise Exception("Stack %s in unknown state: %s, %s", self.name,
                             self.action, self.status)
 
+
     def _trigger_GC(self):
         self.state_set(self.action, self.GC_IN_PROGRESS)
-        db_api.update_resource_traversal(self.context, self.id, 'UNPROCESSED')
+        db_api.update_resource_traversal(self.context, self.id, self.UNPROCESSED)
         self._trigger_convergence()
 
     def _handle_stack_action_complete(self):
-        reason = "%s complete", self.action
+        reason = "%s complete" % self.action
         if (self.action, self.status) in ((self.UPDATE, self.IN_PROGRESS),
                                           (self.ROLLBACK, self.IN_PROGRESS)):
             self._trigger_GC()
         elif self._destructive_action_in_progress():
             if self.action == self.DELETE:
                 self.delete_complete()
-            self.state_set(self.action, self.COMPLETE, reason)
-            self._purge_edges()
+            else:
+                self.state_set(self.action, self.COMPLETE, reason)
+                self._purge_edges()
         else:
             self.state_set(self.action, self.COMPLETE, reason)
 
@@ -387,7 +457,7 @@ class Stack(collections.Mapping):
         reverse = self._is_traversal_order_reverse()
         ready_nodes = db_api.get_ready_nodes(self.context, self.id,
                                              reverse=reverse)
-        unprocessed_nodes= self._get_nodes_matching_status(ready_nodes, 'UNPROCESSED')
+        unprocessed_nodes= self._get_nodes_matching_status(ready_nodes, self.UNPROCESSED)
         if unprocessed_nodes:
             if self.action in (self.UPDATE, self.ROLLBACK):
                 unprocessed_nodes = self._filter_nodes_with_previous_version_scheduled( unprocessed_nodes)
@@ -710,33 +780,6 @@ class Stack(collections.Mapping):
                                 '_%s_kwargs' % action_l, lambda x: {})
         yield handle(**handle_kwargs(r))
 
-    def get_converge_resource_version(self, rsrc_name):
-        # In GC we will be working on multiple versions.
-        # Determine the version of resource on which worker needs to converge
-        rsrc = db_api.resource_get_by_name_and_stack(self.context, rsrc_name, self.id)
-        if self.status != Stack.GC_IN_PROGRESS:
-            return rsrc.version
-        res = resource.Resource
-        if (rsrc.action, rsrc.status) == (res.DELETE, res.INIT):
-            # Resource deleted in new update.
-            # Delete older db versions and converge to delete the phy resource
-            res.delete_older_versions_from_db(self.context, rsrc, self.id,
-                                              rsrc.version)
-            return rsrc.version
-        elif (rsrc.action, rsrc.status) == (res.CREATE, res.COMPLETE):
-            # Update Replace
-            res.delete_older_versions_from_db(self.context, rsrc, self.id,
-                                              rsrc.version - 1)
-            return rsrc.version - 1
-        else:
-            # update inplace or delete complete
-            res.delete_older_versions_from_db(self.context, rsrc, self.id,
-                                              rsrc.version)
-            rc = rpc_client.EngineClient()
-            # nothing to converge
-            rc.notify_resource_observed(self.context, self.id, rsrc.name, rsrc.version)
-            return
-
     def resource_action_runner(self, resource_id, timeout):
         db_rsrc = db_api.resource_get(self.context, resource_id)
         rsrc = resource.Resource.load(db_rsrc, self)
@@ -758,22 +801,12 @@ class Stack(collections.Mapping):
             else:
                 db_api.resource_delete(self.context, db_resource.id)
 
-    def converge(self, rsrc_name):
-        # Just look for stack action and take steps
-        if self.action in (self.CREATE, self.ADOPT):
-            res = self.resources[rsrc_name]
-            LOG.debug("==== Converging resource %s ", rsrc_name)
-            # Find e.g resource.create and call it
-            return self.resource_action(res)
-        elif self.action == self.DELETE:
-            return self.resource_delete(rsrc_name)
-
     @profiler.trace('Stack.update', hide_args=False)
-    def update(self, newstack=None, event=None, action=UPDATE):
+    def update(self, new_stack=None, event=None, action=UPDATE):
         '''
-        Compare the current stack with newstack,
+        Compare the current stack with new_stack,
         and where necessary create/update/delete the resources until
-        this stack aligns with newstack.
+        this stack aligns with new_stack.
 
         Note update of existing stack resources depends on update
         being implemented in the underlying resource types
@@ -783,73 +816,20 @@ class Stack(collections.Mapping):
         '''
         self.state_set(action, self.IN_PROGRESS,
                        'Stack %s started' % action)
-        newstack.id = self.id
-        newstack.action = self.action
-        newstack.status = self.status
-        newstack.status_reason = self.status_reason
-        newstack.updated_time = timeutils.utcnow()
-        newstack.request_id = uuid.uuid4()
-        newstack.store()
+        new_stack.id = self.id
+        new_stack.action = self.action
+        new_stack.status = self.status
+        new_stack.status_reason = self.status_reason
+        new_stack.updated_time = timeutils.utcnow()
+        # update request ID
+        new_stack.request_id = uuidutils.generate_uuid()
+        new_stack.store()
         
         # Mark all nodes as UNPROCESSED
-        db_api.update_resource_traversal(self.context, newstack.id,
-                                         status="UNPROCESSED")
+        db_api.update_resource_traversal(self.context, new_stack.id,
+                                         status=self.UNPROCESSED)
 
-        def create_delete_version(res):
-            t = rsrc_defn.ResourceDefinition(res.name, res.t.resource_type)
-            del_res = resource.Resource(res.name, t, self, version=res.version + 1)
-            del_res.action = res.DELETE
-            del_res.status = res.INIT
-            del_res.resource_id = res.resource_id
-            del_res.store()
-
-            res.resource_id = None
-            res.store_update(res.action, res.status, "Removed physical id for deletion")
-
-        def create_new_resource_version(new_res_obj, db_res, action):
-            new_res_obj.id = None
-            new_res_obj.action = action
-            new_res_obj.status = new_res_obj.INIT
-            new_res_obj.resource_id = old_res.nova_instance
-            new_res_obj.version = old_res.version + 1
-            if old_res.action == resource.Resource.DELETE:
-                # if the resource was deleted
-                new_res_obj.action = resource.Resource.CREATE
-            new_res_obj.store()
-
-            old_res_obj = resource.Resource.load(db_res, self)
-            old_res_obj.resource_id = None
-            old_res_obj.store_update(old_res_obj.action,
-                                     old_res_obj.status,
-                                     "Remove nova_instance from old resource version")
-
-        for res_name in db_api.get_all_resources_from_graph(self.context, self.id):
-            old_res = db_api.resource_get_by_name_and_stack(context=self.context,
-                                                            resource_name=res_name,
-                                                            stack_id=self.id)
-
-            try:
-                new_res = newstack.resources[res_name]
-            except KeyError:
-                #Resource does not exists in new template therefore it is deleted
-                #create_new_resource_version( old_res, res.DELETE)
-                if old_res:
-                    res_obj = resource.Resource.load(old_res, self)
-                    create_delete_version(res_obj)
-            else:
-                if old_res:
-                    old_rsrc_defn = rsrc_defn.ResourceDefinition.from_dict(
-                                        json.loads(old_res.rsrc_defn),
-                                        old_res.rsrc_defn_hash)
-                    if new_res.needs_update(old_rsrc_defn):
-                        create_new_resource_version(new_res, old_res, new_res.UPDATE)
-                    else:
-                        db_api.update_resource_traversal(self.context, self.id,
-                                                         status="PROCESSED",
-                                                         resource_name=new_res.name)
-                else:
-                    new_res.state_set(new_res.CREATE, new_res.INIT)
-        Stack.process_ready_resources(self.context, stack_id=self.id, timeout=self.timeout_secs())
+        new_stack._trigger_convergence()
 
     def pre_update_complete(self):
         self.state_set(self.action, self.GC_IN_PROGRESS,
@@ -861,10 +841,10 @@ class Stack(collections.Mapping):
                     self.context, rsrc_name, self.id)
                 if len(db_resources) > 1:
                     db_api.update_resource_traversal(self.context, self.id,
-                                                     status="UNPROCESSED",
+                                                     status=self.UNPROCESSED,
                                                      resource_name=rsrc_name)
 
-        Stack.process_ready_resources(self.context, self.id, reverse=True)
+        self._trigger_convergence()
 
     @profiler.trace('Stack.delete', hide_args=False)
     def delete_start(self, action=DELETE, backup=False, abandon=False):
@@ -887,25 +867,13 @@ class Stack(collections.Mapping):
 
         self.state_set(action, self.IN_PROGRESS, 'Stack %s started' %
                        action)
-
-        for res_name in db_api.get_all_resources_from_graph(self.context, self.id):
-            db_res = db_api.resource_get_by_name_and_stack(context=self.context,
-                                                            resource_name=res_name,
-                                                            stack_id=self.id)
-            if db_res:
-                res_obj = resource.Resource.load(db_res, self)
-                res_obj.state_set(res_obj.DELETE, res_obj.INIT)
-
+        # update request ID
+        self.request_id = uuidutils.generate_uuid()
+        self.store()
         db_api.update_resource_traversal(context=self.context,
                                          stack_id=self.id,
-                                         status="UNPROCESSED")
-
-        snapshots = db_api.snapshot_get_all(self.context, self.id)
-        for snapshot in snapshots:
-            self.delete_snapshot(snapshot)
-
-        Stack.process_ready_resources(self.context, stack_id=self.id,
-                                     reverse=True, timeout=self.timeout_secs())
+                                         status=self.UNPROCESSED)
+        self._trigger_convergence()
 
     def delete_complete(self, abandon=False):
         #(TODO) : Handle failure
@@ -969,12 +937,12 @@ class Stack(collections.Mapping):
                     stack_status = self.FAILED
                     reason = "Error deleting project: %s" % six.text_type(ex)
 
-        try:
-            reason = 'Stack %s completed successfully' % self.action
-            self.state_set(self.action, self.COMPLETE, reason)
-        except exception.NotFound:
-            LOG.info(_LI("Tried to delete stack that does not exist "
-                         "%s "), self.id)
+            try:
+                reason = 'Stack %s completed successfully' % self.action
+                self.state_set(self.action, self.COMPLETE, reason)
+            except exception.NotFound:
+                LOG.info(_LI("Tried to delete stack that does not exist "
+                             "%s "), self.id)
 
         if self.status != self.FAILED:
             # delete the stack resource graph
@@ -1074,14 +1042,16 @@ class Stack(collections.Mapping):
         reverse = self._is_traversal_order_reverse()
         ready_nodes = db_api.get_ready_nodes(self.context, self.id,
                                              reverse=reverse)
-        processing_nodes = self._get_nodes_matching_status(ready_nodes, 'PROCESSING')
+        processing_nodes = self._get_nodes_matching_status(ready_nodes, self.PROCESSING)
         if not processing_nodes:
             # Rollback = True and action is CREATE/UPDATE
             if (not self.disable_rollback and
                         self.action in (Stack.CREATE, Stack.UPDATE)):
                 self.rollback()
+            elif self.action == Stack.DELETE:
+                # still do delete_complete
+                self.delete_complete()
             else:
-                # No rollback, Do nothing
                 pass
         else:
             # Ignore notification. Wait for others to complete
@@ -1113,7 +1083,7 @@ class Stack(collections.Mapping):
             return
 
         res = db_api.resource_get(self.context, resource_id)
-        db_api.update_resource_traversal(self.context, self.id, 'PROCESSED',
+        db_api.update_resource_traversal(self.context, self.id, self.PROCESSED,
                                          resource_name=res.name)
         if self.status == Stack.FAILED:
             # an earlier event might have marked stack as failure
@@ -1141,6 +1111,7 @@ class Stack(collections.Mapping):
         try:
             self.resource_action_runner(resource_id, timeout)
         except Exception as e:
+            LOG.exception(e)
             # Don't set the stack state here
             self.rpc_client.notify_resource_observed(self.context, request_id,
                                                       self.id, resource_id,

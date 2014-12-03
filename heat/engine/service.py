@@ -513,12 +513,16 @@ class EngineService(service.Service):
         lock = self._spin_wait_acquire_lock_or_timeout(context, stack)
         if not lock:
             stack.handle_timeout()
-        stack.process_resource_notif(request_id, resource_id, convg_status)
+        try:
+            stack.process_resource_notif(request_id, resource_id, convg_status)
+        finally:
+            lock.release(stack_id)
+
 
     @request_context
     def converge_resource(self, context, request_id, stack_id, resource_id, timeout):
         stack = parser.Stack.load(context, stack_id=stack_id)
-        self.thread_group_mgr.start(context, stack_id, stack.do_converge,
+        self.thread_group_mgr.start(stack_id, stack.do_converge,
                                     request_id, resource_id, timeout)
 
     @request_context
@@ -526,7 +530,7 @@ class EngineService(service.Service):
                                  resource_id, convg_status):
         # Just launch in a thread.
         # simply start a new thread with handle_resouce_notif as func
-        self.thread_group_mgr.start(context, stack_id, self._handle_resource_notif,
+        self.thread_group_mgr.start(stack_id, self._handle_resource_notif,
                                     context, request_id, stack_id, resource_id, convg_status)
 
     @request_context
@@ -795,7 +799,7 @@ class EngineService(service.Service):
         st = self._get_stack(cnxt, stack_identity)
         LOG.info(_LI('Deleting stack %s'), st.name)
         stack = parser.Stack.load(cnxt, stack=st)
-
+        # TODO: spin wait for lock in another thread
         lock = stack_lock.StackLock(cnxt, stack, self.engine_id)
         with lock.try_thread_lock(stack.id) as acquire_result:
 
