@@ -429,7 +429,6 @@ class Stack(collections.Mapping):
             raise Exception("Stack %s in unknown state: %s, %s", self.name,
                             self.action, self.status)
 
-
     def _trigger_GC(self):
         self.state_set(self.action, self.GC_IN_PROGRESS)
         db_api.update_resource_traversal(self.context, self.id, self.UNPROCESSED)
