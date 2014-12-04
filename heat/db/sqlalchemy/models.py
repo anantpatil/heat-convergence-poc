@@ -356,9 +356,15 @@ class Snapshot(BASE, HeatBase):
 
 class DependencyTaskGraph(BASE, HeatBase):
     """ Represents a graph of stack resources. """
-    statuses = (UN_TRAVERSED, SCHEDULED, TRAVERSED
-              ) = (0, 1, 2)
+    class TASK_STATUS:
+        UN_SCHEDULED = 0
+        SCHEDULED = 1
+        DONE = 2
 
+    '''
+    statuses = (UN_SCHEDULED, SCHEDULED, DONE
+              ) = (0, 1, 2)
+    '''
     __tablename__ = 'dependency_task_graph'
 
     resource_name = sqlalchemy.Column('resource_name', sqlalchemy.String(255),
@@ -368,5 +374,5 @@ class DependencyTaskGraph(BASE, HeatBase):
     stack_id = sqlalchemy.Column('stack_id', sqlalchemy.String(36),
                                  sqlalchemy.ForeignKey('stack.id'),
                                  primary_key=True,nullable=False)
-    status = sqlalchemy.Column('state', sqlalchemy.Integer,
-                               default=UN_TRAVERSED)
+    status = sqlalchemy.Column('status', sqlalchemy.Integer,
+                               default=TASK_STATUS.UN_SCHEDULED)

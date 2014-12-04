@@ -42,8 +42,6 @@ from heat.openstack.common import log as logging
 from heat.openstack.common import uuidutils
 from heat.rpc import client as rpc_client
 
-from convg_worker import CONVERGE_RESPONSE
-
 LOG = logging.getLogger(__name__)
 
 ERROR_WAIT_TIME = 240
@@ -55,10 +53,15 @@ class ForcedCancel(BaseException):
     def __str__(self):
         return "Operation cancelled"
 
-class GRAPH_TRAVERSAL_STATE:
-    UN_TRAVERSED = 0 # Task pending to be taken-up
+class TASK_STATUS:
+    UN_SCHEDULED = 0 # Task pending to be taken-up
     SCHEDULED = 1    # Task running
-    TRAVERSED = 2    # Task done
+    DONE = 2         # Task done
+
+class CONVERGE_RESPONSE:
+    OK = 1      # Resource converged
+    PANIC = 2   # Woker detects new update to stack, panics
+    FAILED = 3  # Attempted, but failed
 
 class Stack(collections.Mapping):
 
@@ -371,12 +374,12 @@ class Stack(collections.Mapping):
 
     def _mark_res_as_scheduled(self, res_name):
         db_api.update_graph_traversal(self.context, self.id,
-                                         GRAPH_TRAVERSAL_STATE.SCHEDULED,
+                                         TASK_STATUS.SCHEDULED,
                                          resource_name=res_name)
 
     def _mark_res_as_done(self, res_name):
         db_api.update_graph_traversal(self.context, self.id,
-                                         GRAPH_TRAVERSAL_STATE.TRAVERSED,
+                                         TASK_STATUS.DONE,
                                          resource_name=res_name)
 
     def _filter_nodes_with_previous_versions_scheduled(self, ready_nodes):
@@ -405,7 +408,7 @@ class Stack(collections.Mapping):
 
     def _graph_traversal_complete(self, ready_nodes):
         resources_in_progress =  self._get_nodes_matching_status(
-            ready_nodes, GRAPH_TRAVERSAL_STATE.SCHEDULED)
+            ready_nodes, TASK_STATUS.SCHEDULED)
         return resources_in_progress is None or len(resources_in_progress) == 0
 
     def _schedule_convg_jobs(self, ready_nodes):
@@ -426,7 +429,7 @@ class Stack(collections.Mapping):
     def _trigger_GC(self):
         self.state_set(self.action, self.GC_IN_PROGRESS)
         db_api.update_graph_traversal(self.context, self.id,
-                                         GRAPH_TRAVERSAL_STATE.UN_TRAVERSED)
+                                         TASK_STATUS.UN_SCHEDULED)
         self._trigger_convergence()
 
     def _handle_stack_action_complete(self):
@@ -452,7 +455,7 @@ class Stack(collections.Mapping):
         ready_nodes = db_api.get_ready_nodes(self.context, self.id,
                                              reverse=reverse)
         unscheduled_nodes= self._get_nodes_matching_status(ready_nodes,
-                                                           GRAPH_TRAVERSAL_STATE.UN_TRAVERSED)
+                                                           TASK_STATUS.UN_SCHEDULED)
         if unscheduled_nodes:
             if self.action in (self.UPDATE, self.ROLLBACK) and concurrent_update_on:
                 # If and only if there is a concurrent update going, do the
@@ -823,9 +826,9 @@ class Stack(collections.Mapping):
         new_stack._generate_new_req_id()
         new_stack.store()
         
-        # Mark all nodes as UN_TRAVERSED
+        # Mark all nodes as UN_SCHEDULED
         db_api.update_graph_traversal(self.context, new_stack.id,
-                                         status=GRAPH_TRAVERSAL_STATE.UN_TRAVERSED)
+                                         status=TASK_STATUS.UN_SCHEDULED)
 
         new_stack._trigger_convergence()
 
@@ -839,7 +842,7 @@ class Stack(collections.Mapping):
                     self.context, rsrc_name, self.id)
                 if len(db_resources) > 1:
                     db_api.update_graph_traversal(self.context, self.id,
-                                                     status=GRAPH_TRAVERSAL_STATE.UN_TRAVERSED,
+                                                     status=TASK_STATUS.UN_SCHEDULED,
                                                      resource_name=rsrc_name)
 
         self._trigger_convergence()
@@ -870,7 +873,7 @@ class Stack(collections.Mapping):
         self.store()
         db_api.update_graph_traversal(context=self.context,
                                          stack_id=self.id,
-                                         status=GRAPH_TRAVERSAL_STATE.UN_TRAVERSED)
+                                         status=TASK_STATUS.UN_SCHEDULED)
         self._trigger_convergence()
 
     def delete_complete(self, abandon=False):
@@ -1042,7 +1045,7 @@ class Stack(collections.Mapping):
         ready_nodes = db_api.get_ready_nodes(self.context, self.id,
                                              reverse=reverse)
         processing_nodes = self._get_nodes_matching_status(
-                                 ready_nodes, GRAPH_TRAVERSAL_STATE.SCHEDULED)
+                                 ready_nodes, TASK_STATUS.SCHEDULED)
         if not processing_nodes:
             # Rollback = True and action is CREATE/UPDATE
             if (not self.disable_rollback and
@@ -1084,7 +1087,7 @@ class Stack(collections.Mapping):
 
         res = db_api.resource_get(self.context, resource_id)
         db_api.update_graph_traversal(self.context, self.id,
-                                         GRAPH_TRAVERSAL_STATE.TRAVERSED,
+                                         TASK_STATUS.DONE,
                                          resource_name=res.name)
         if self.status == Stack.FAILED:
             # an earlier event might have marked stack as failure

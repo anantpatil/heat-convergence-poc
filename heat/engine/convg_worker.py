@@ -11,17 +11,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from parser import Stack
+from heat.engine import stack as parser
 
 from heat.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
-
-class CONVERGE_RESPONSE:
-    OK = 0      # Resource converged
-    PANIC = 1   # Woker detects new update to stack, panics
-    FAILED = 2  # Attempted, but failed
+Stack = parser.Stack
+CONVERGE_RESPONSE = parser.CONVERGE_RESPONSE
 
 class ConvergenceWorker:
     """"
@@ -29,22 +26,22 @@ class ConvergenceWorker:
     """
 
     @staticmethod
-    def do_converge(context, incoming_req_id, stack_id, resource_id, timeout):
+    def do_converge(context, request_id, stack_id, resource_id, timeout):
         stack = Stack.load(context, stack_id=stack_id)
-        if incoming_req_id != stack.current_req_id():
+        if request_id != stack.current_req_id():
             # panic: a new stack operation was issued
             stack.rpc_client.notify_resource_observed(
-                context, incoming_req_id, stack_id, resource_id,
+                context, request_id, stack_id, resource_id,
                 CONVERGE_RESPONSE.PANIC)
         try:
             stack.resource_action_runner(resource_id, timeout)
         except Exception as e:
             LOG.exception(e)
-            stack.rpc_client.notify_resource_observed(context, incoming_req_id,
+            stack.rpc_client.notify_resource_observed(context, request_id,
                                                      stack.id, resource_id,
                                                      CONVERGE_RESPONSE.FAILED)
 
         stack.rpc_client.notify_resource_observed(
-            context, incoming_req_id, stack_id,
+            context, request_id, stack.id,
             resource_id, CONVERGE_RESPONSE.OK)
 

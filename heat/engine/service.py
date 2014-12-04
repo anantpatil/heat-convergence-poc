@@ -38,7 +38,6 @@ from heat.engine import environment
 from heat.engine.event import Event
 from heat.engine import parameter_groups
 from heat.engine import properties
-from heat.engine import resource as resourcem
 from heat.engine import resources
 from heat.engine import stack as parser
 from heat.engine import stack_lock
@@ -524,12 +523,12 @@ class EngineService(service.Service):
 
 
     @request_context
-    def converge_resource(self, context, incoming_req_id, stack_id, resource_id,
+    def converge_resource(self, context, request_id, stack_id, resource_id,
                           timeout):
         from convg_worker import ConvergenceWorker
         self.thread_group_mgr.start(stack_id, ConvergenceWorker.do_converge,
-                                    context, incoming_req_id, resource_id,
-                                    timeout)
+                                    context, request_id, stack_id,
+                                    resource_id, timeout)
 
     @request_context
     def notify_resource_observed(self, context, request_id, stack_id,
