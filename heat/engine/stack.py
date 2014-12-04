@@ -289,6 +289,8 @@ class Stack(collections.Mapping):
 
     def _create_delete_version(self, res):
         del_res = copy.copy(res)
+        del_res.id = None
+        del_res.version += 1
         del_res.store_update(res.DELETE, res.INIT, "Marked for deletion")
 
         res.resource_id = None
@@ -363,22 +365,26 @@ class Stack(collections.Mapping):
                                                            self)
         if len(all_versions) == 1:
             # No older version; no op
+            LOG.debug("==== No older versions of %s were found for clean-up"
+                      % res_name)
+            self._mark_res_as_done(res_name)
             return
         # all versions are returned in descending order of version
         curr_res = all_versions[0]
         if (curr_res.action, curr_res.status) == (curr_res.DELETE, curr_res.INIT):
             # marked for deletion, delete all versions
-            self._schedule_delete_job(all_versions=all_versions)
+            self._schedule_delete_job(res_name, versions_to_del=all_versions)
         else:
             # delete older versions
-            self._schedule_delete_job(all_versions=all_versions[1:])
+            self._schedule_delete_job(res_name, versions_to_del=all_versions[1:])
 
-    def _schedule_delete_job(self, res_name, all_versions=None):
-        if not all_versions:
-            all_versions = resource.Resource.load_all_versions(self.context,
+    def _schedule_delete_job(self, res_name, versions_to_del=None):
+        if not versions_to_del:
+            versions_to_del = resource.Resource.load_all_versions(self.context,
                                                                res_name,
                                                                self)
-        for res in all_versions:
+        no_version_was_scheduled_for_deletion = True
+        for res in versions_to_del:
             if res.resource_id:
                 res.store_update(res.DELETE, res.SCHEDULED,
                                  "Scheduled for deletion")
@@ -386,8 +392,13 @@ class Stack(collections.Mapping):
                     self.context, self.current_req_id(), self.id, res.id,
                     self._get_remaining_timeout_secs())
                 self._mark_res_as_scheduled(res_name)
+                no_version_was_scheduled_for_deletion = False
             else:
                 db_api.resource_delete(self.context, res.id)
+
+        if no_version_was_scheduled_for_deletion:
+            # at least one version was scheduled to worker
+            self._mark_res_as_done(res_name)
 
     def _mark_res_as_scheduled(self, res_name):
         db_api.update_graph_traversal(self.context, self.id,
