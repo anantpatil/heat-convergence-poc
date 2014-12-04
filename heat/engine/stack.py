@@ -289,19 +289,18 @@ class Stack(collections.Mapping):
 
     def _create_delete_version(self, res):
         del_res = copy.copy(res)
-        del_res.id = None
+        del_res.id = None # avoid overwriting the old resource
         del_res.version += 1
         del_res.store_update(res.DELETE, res.INIT, "Marked for deletion")
 
         res.resource_id = None
         res.store_update(res.action, res.status, "Removed physical id for deletion")
 
-    def _create_update_version(self, new_res, old_res):
+    def _persis_update_version(self, new_res, old_res):
         new_res.version = old_res.version + 1
         if old_res.action == old_res.DELETE:
             # if the resource was scheduled for deletion, create
             new_res.action = new_res.CREATE
-        new_res.status = new_res.SCHEDULED
         new_res.store()
 
     def _schedule_create_job(self, res_name):
@@ -329,7 +328,9 @@ class Stack(collections.Mapping):
             new_res = resource.Resource(res_name, new_res_defn, self)
             if old_res:
                 if old_res.needs_update(new_res.t):
-                    self._create_update_version(new_res, old_res)
+                    self._persis_update_version(new_res, old_res)
+                    old_res.state_set(old_res.UPDATE, old_res.SCHEDULED,
+                                      "Scheduled for update.")
                     self.rpc_client.converge_resource(
                         self.context, self.current_req_id(), self.id,
                         old_res.id, self._get_remaining_timeout_secs())
@@ -497,6 +498,9 @@ class Stack(collections.Mapping):
                 unscheduled_nodes = self._filter_nodes_with_previous_versions_scheduled(unscheduled_nodes)
             if unscheduled_nodes:
                 self._schedule_convg_jobs(unscheduled_nodes)
+                # make sure to schedule next set of nodes if in the previous run of this
+                # did not yield any job.
+                self._trigger_convergence(concurrent_update_on=concurrent_update_on)
             else:
                 return
         else:
@@ -1126,7 +1130,7 @@ class Stack(collections.Mapping):
             # an earlier event might have marked stack as failure
             self._handle_stack_failure()
         else:
-            if res.status == resource.Resource.COMPLETE:
+            if convg_status == CONVERGE_RESPONSE.OK:
                 if self._destructive_action_in_progress():
                     db_api.resource_delete(self.context, res.id)
                 self._handle_success()

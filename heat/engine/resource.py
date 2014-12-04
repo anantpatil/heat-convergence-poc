@@ -191,7 +191,7 @@ class Resource(object):
                 self.load_data(db_resource)
 
     def __copy__(self):
-        return Resource(self.name, self.t, self.stack, load_from_db=True)
+        return Resource(self.name, self.t, self.stack, version=self.version, load_from_db=True)
 
     @classmethod
     def load(cls, db_resource, stack):
@@ -701,8 +701,14 @@ class Resource(object):
                                        self.context)
         return self._needs_update(after, before, after_props, before_props, None)
 
-    def _move_resource_id_to_new_version(self, new_res):
-        pass
+    def _move_to_newer_version(self, new_res, back_up):
+        self.version = new_res.version
+        self.state_set(self.UPDATE, self.COMPLETE)
+
+        # overwrite the new_res with back=up
+        back_up.id = new_res.id
+        back_up.resource_id = new_res.resource_id
+        back_up.state_set(back_up.action, back_up.status, 'Update replaced')
 
     @scheduler.wrappertask
     def _replace(self, new_res):
@@ -722,11 +728,14 @@ class Resource(object):
                                                             version=self.version + 1)
         new_res = Resource.load(db_resource, self.stack)
         try:
+            back_up = self.__copy__()
             yield self.do_update(new_res._frozen_defn)
-            self._move_resource_id_to_new_version(new_res)
+            self._move_to_newer_version(new_res, back_up)
         except UpdateReplace:
             # Resource does not support in-place update, create a new one.
-            yield self._replace_resource(new_res)
+            self.state_set(self.action, self.FAILED, 'Update replace failed.'
+                                                     ' Creating new version.')
+            yield self._replace(new_res)
 
     @scheduler.wrappertask
     def do_update(self, after, before=None, prev_resource=None):
