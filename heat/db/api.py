@@ -363,8 +363,8 @@ def get_ready_nodes(context, stack_id, reverse=False):
         return IMPL.get_ready_nodes(context, stack_id, reverse)
 
 
-def update_resource_traversal(context, stack_id, status, resource_name=None):
-    return IMPL.update_resource_traversal(context, stack_id, status,
+def update_graph_traversal(context, stack_id, status, resource_name=None):
+    return IMPL.update_graph_traversal(context, stack_id, status,
                                           resource_name)
 
 
@@ -374,9 +374,8 @@ def resource_get_all_versions_by_name_and_stack(context, resource_name,
         context, resource_name, stack_id)
 
 
-def resource_graph_delete_all_edges(context, stack_id, resource_name):
-    return IMPL.resource_graph_delete_all_edges(context, stack_id,
-                                                resource_name)
+def dep_task_graph_delete_all_edges(context, stack_id, res_names):
+    return IMPL.dep_task_graph_delete_all_edges(context, stack_id, res_names)
 
 
 def resource_delete(context, resource_id):

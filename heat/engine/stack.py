@@ -20,7 +20,6 @@ from oslo.config import cfg
 from oslo.utils import encodeutils
 from osprofiler import profiler
 import six
-import json
 
 from heat.common import context as common_context
 from heat.common import exception
@@ -37,12 +36,13 @@ from heat.engine.notification import stack as notification
 from heat.engine.parameter_groups import ParameterGroups
 from heat.engine import resource
 from heat.engine import resources
-from heat.engine import rsrc_defn
 from heat.engine import scheduler
 from heat.engine.template import Template
 from heat.openstack.common import log as logging
 from heat.openstack.common import uuidutils
 from heat.rpc import client as rpc_client
+
+from convg_worker import CONVERGE_RESPONSE
 
 LOG = logging.getLogger(__name__)
 
@@ -55,6 +55,11 @@ class ForcedCancel(BaseException):
     def __str__(self):
         return "Operation cancelled"
 
+class GRAPH_TRAVERSAL_STATE:
+    UN_TRAVERSED = 0
+    SCHEDULED = 1
+    TRAVERSED = 2
+    DEFERRED_DELETE = 3
 
 class Stack(collections.Mapping):
 
@@ -69,12 +74,6 @@ class Stack(collections.Mapping):
     STATUSES = (IN_PROGRESS, GC_IN_PROGRESS, FAILED, COMPLETE
                 ) = ('IN_PROGRESS', 'GC_IN_PROGRESS', 'FAILED', 'COMPLETE')
 
-    CONVG_STATUS = (CONVG_OK, CONVG_PANIC, CONVG_FAILED) \
-        = ('CONVG_OK', 'CONVG_PANIC', 'CONVG_FAILED')
-
-    GRAPH_TRAVERSAL_STATUS = (UNPROCESSED, PROCESSING, PROCESSED, DEFERRED_DELETE) \
-        = ('UNPROCESSED', 'PROCESSING', 'PROCESSED', 'DEFERRED_DELETE')
-
     _zones = None
 
     def __init__(self, context, stack_name, tmpl,
@@ -84,8 +83,7 @@ class Stack(collections.Mapping):
                  adopt_stack_data=None, stack_user_project_id=None,
                  created_time=None, updated_time=None,
                  user_creds_id=None, tenant_id=None,
-                 use_stored_context=False, username=None,
-                 request_id=None):
+                 use_stored_context=False, username=None, request_id=None):
         '''
         Initialise from a context, name, Template object and (optionally)
         Environment object. The database ID may also be initialised, if the
@@ -121,7 +119,7 @@ class Stack(collections.Mapping):
         self.updated_time = updated_time
         self.user_creds_id = user_creds_id
         self.rpc_client = rpc_client.EngineClient()
-        self.request_id = request_id or uuidutils.generate_uuid()
+        self._request_id = request_id or uuidutils.generate_uuid()
 
         if use_stored_context:
             self.context = self.stored_context()
@@ -306,7 +304,7 @@ class Stack(collections.Mapping):
         res = resource.Resource(res_name, self.resource_definitions[res_name],
                                 self)
         res.store_update(res.CREATE, res.SCHEDULED, "Scheduled for create")
-        self.rpc_client.converge_resource(self.context, self.request_id,
+        self.rpc_client.converge_resource(self.context, self.current_req_id(),
                                           self.id, res.id,
                                           self._get_remaining_timeout_secs())
         self._mark_res_as_scheduled(res_name)
@@ -329,8 +327,8 @@ class Stack(collections.Mapping):
                 if old_res.needs_update(new_res.t):
                     self._create_update_version(new_res, old_res)
                     self.rpc_client.converge_resource(
-                        self.context, self.request_id, self.id, old_res.id,
-                        self._get_remaining_timeout_secs())
+                        self.context, self.current_req_id(), self.id,
+                        old_res.id, self._get_remaining_timeout_secs())
                     self._mark_res_as_scheduled(res_name)
                 else:
                     # Nothing needs to be done
@@ -338,7 +336,7 @@ class Stack(collections.Mapping):
             else:
                 new_res.state_set(new_res.CREATE, new_res.SCHEDULED)
                 self.rpc_client.converge_resource(
-                    self.context, self.request_id, self.id, new_res.id,
+                    self.context, self.current_req_id(), self.id, new_res.id,
                     self._get_remaining_timeout_secs())
                 self._mark_res_as_scheduled(res_name)
         else:
@@ -364,25 +362,25 @@ class Stack(collections.Mapping):
                 res.store_update(res.DELETE, res.SCHEDULED,
                                  "Scheduled for deletion")
                 self.rpc_client.converge_resource(
-                    self.context, self.request_id, self.id, res.id,
+                    self.context, self.current_req_id(), self.id, res.id,
                     self._get_remaining_timeout_secs())
                 self._mark_res_as_scheduled(res_name)
             else:
                 db_api.resource_delete(self.context, res.id)
 
     def _mark_res_as_scheduled(self, res_name):
-        db_api.update_resource_traversal(self.context, self.id,
-                                         self.PROCESSING,
+        db_api.update_graph_traversal(self.context, self.id,
+                                         GRAPH_TRAVERSAL_STATE.SCHEDULED,
                                          resource_name=res_name)
 
     def _mark_res_as_done(self, res_name):
-        db_api.update_resource_traversal(self.context, self.id,
-                                         self.PROCESSED,
+        db_api.update_graph_traversal(self.context, self.id,
+                                         GRAPH_TRAVERSAL_STATE.TRAVERSED,
                                          resource_name=res_name)
 
     def _mark_res_for_deferred_delete(self, res_name):
-        db_api.update_resource_traversal(self.context, self.id,
-                                         self.DEFERRED_DELETE,
+        db_api.update_graph_traversal(self.context, self.id,
+                                         GRAPH_TRAVERSAL_STATE.DEFERRED_DELETE,
                                          resource_name=res_name)
 
     def _filter_nodes_with_previous_version_scheduled(self, ready_nodes):
@@ -431,7 +429,8 @@ class Stack(collections.Mapping):
 
     def _trigger_GC(self):
         self.state_set(self.action, self.GC_IN_PROGRESS)
-        db_api.update_resource_traversal(self.context, self.id, self.UNPROCESSED)
+        db_api.update_graph_traversal(self.context, self.id,
+                                         GRAPH_TRAVERSAL_STATE.UN_TRAVERSED)
         self._trigger_convergence()
 
     def _handle_stack_action_complete(self):
@@ -574,7 +573,7 @@ class Stack(collections.Mapping):
             'stack_user_project_id': self.stack_user_project_id,
             'updated_at': self.updated_time,
             'user_creds_id': self.user_creds_id,
-            'req_id': self.request_id,
+            'req_id': self.current_req_id(),
             'backup': backup
         }
         if self.id:
@@ -821,12 +820,12 @@ class Stack(collections.Mapping):
         new_stack.status_reason = self.status_reason
         new_stack.updated_time = timeutils.utcnow()
         # update request ID
-        new_stack.request_id = uuidutils.generate_uuid()
+        new_stack._generate_new_req_id()
         new_stack.store()
         
         # Mark all nodes as UNPROCESSED
-        db_api.update_resource_traversal(self.context, new_stack.id,
-                                         status=self.UNPROCESSED)
+        db_api.update_graph_traversal(self.context, new_stack.id,
+                                         status=GRAPH_TRAVERSAL_STATE.UN_TRAVERSED)
 
         new_stack._trigger_convergence()
 
@@ -839,8 +838,8 @@ class Stack(collections.Mapping):
                     resource_get_all_versions_by_name_and_stack(
                     self.context, rsrc_name, self.id)
                 if len(db_resources) > 1:
-                    db_api.update_resource_traversal(self.context, self.id,
-                                                     status=self.UNPROCESSED,
+                    db_api.update_graph_traversal(self.context, self.id,
+                                                     status=GRAPH_TRAVERSAL_STATE.UN_TRAVERSED,
                                                      resource_name=rsrc_name)
 
         self._trigger_convergence()
@@ -867,11 +866,11 @@ class Stack(collections.Mapping):
         self.state_set(action, self.IN_PROGRESS, 'Stack %s started' %
                        action)
         # update request ID
-        self.request_id = uuidutils.generate_uuid()
+        self._generate_new_req_id()
         self.store()
-        db_api.update_resource_traversal(context=self.context,
+        db_api.update_graph_traversal(context=self.context,
                                          stack_id=self.id,
-                                         status=self.UNPROCESSED)
+                                         status=GRAPH_TRAVERSAL_STATE.UN_TRAVERSED)
         self._trigger_convergence()
 
     def delete_complete(self, abandon=False):
@@ -1011,7 +1010,8 @@ class Stack(collections.Mapping):
         all_resources = set(db_api.get_all_resources_from_graph(self.context, self.id))
         current_resources = set(self.resource_definitions.keys())
         deleted_resources = all_resources - current_resources
-        db_api.resource_graph_delete_all_edges(self.context, self.id, deleted_resources)
+        db_api.dep_task_graph_delete_all_edges(self.context, self.id,
+                                               deleted_resources)
 
     def _get_remaining_timeout_secs(self):
         if self.action == Stack.CREATE:
@@ -1041,7 +1041,8 @@ class Stack(collections.Mapping):
         reverse = self._is_traversal_order_reverse()
         ready_nodes = db_api.get_ready_nodes(self.context, self.id,
                                              reverse=reverse)
-        processing_nodes = self._get_nodes_matching_status(ready_nodes, self.PROCESSING)
+        processing_nodes = self._get_nodes_matching_status(
+                                 ready_nodes, GRAPH_TRAVERSAL_STATE.SCHEDULED)
         if not processing_nodes:
             # Rollback = True and action is CREATE/UPDATE
             if (not self.disable_rollback and
@@ -1069,20 +1070,21 @@ class Stack(collections.Mapping):
     def _get_nodes_matching_status(self, nodes, status):
         return filter(lambda (res_name, res_status): res_status == status, nodes)
 
-    def process_resource_notif(self, request_id, resource_id, convg_status):
-        if convg_status == Stack.CONVG_PANIC:
+    def process_resource_notif(self, incoming_req_id, resource_id, convg_status):
+        if convg_status == CONVERGE_RESPONSE.PANIC:
             # a new update was issued, worker panicked
             db_api.resource_delete(self.context, resource_id)
             self._trigger_convergence()
             return
 
-        if request_id != self.request_id:
+        if incoming_req_id != self.current_req_id():
             # an older version was converged
             self._trigger_convergence()
             return
 
         res = db_api.resource_get(self.context, resource_id)
-        db_api.update_resource_traversal(self.context, self.id, self.PROCESSED,
+        db_api.update_graph_traversal(self.context, self.id,
+                                         GRAPH_TRAVERSAL_STATE.TRAVERSED,
                                          resource_name=res.name)
         if self.status == Stack.FAILED:
             # an earlier event might have marked stack as failure
@@ -1101,21 +1103,8 @@ class Stack(collections.Mapping):
                 db_api.stack_update(self.context, self.id, values)
                 self._handle_stack_failure()
 
-    def do_converge(self, request_id, resource_id, timeout):
-        if self.request_id != request_id:
-            # panic: probably new stack request was received, return fail
-            self.rpc_client.notify_resource_observed(
-                self.context, request_id, self.id, resource_id,
-                Stack.CONVG_PANIC)
-        try:
-            self.resource_action_runner(resource_id, timeout)
-        except Exception as e:
-            LOG.exception(e)
-            # Don't set the stack state here
-            self.rpc_client.notify_resource_observed(self.context, request_id,
-                                                      self.id, resource_id,
-                                                      Stack.CONVG_FAILED)
+    def _generate_new_req_id(self):
+       self._request_id = uuidutils.generate_uuid()
 
-        self.rpc_client.notify_resource_observed(
-            self.context, request_id, self.id,
-            resource_id, Stack.CONVG_OK)
+    def current_req_id(self):
+        return self._request_id

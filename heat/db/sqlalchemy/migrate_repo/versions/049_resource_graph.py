@@ -17,8 +17,8 @@ def upgrade(migrate_engine):
     meta = sqlalchemy.MetaData()
     meta.bind = migrate_engine
 
-    resource_graph = sqlalchemy.Table(
-        'resource_graph', meta,
+    dependency_task_graph = sqlalchemy.Table(
+        'dependency_task_graph', meta,
         sqlalchemy.Column('resource_name', sqlalchemy.String(255),
                           primary_key=True, nullable=False),
         sqlalchemy.Column('needed_by', sqlalchemy.String(255),
@@ -26,19 +26,19 @@ def upgrade(migrate_engine):
         sqlalchemy.Column('stack_id', sqlalchemy.String(36),
                           sqlalchemy.ForeignKey('stack.id'),
                           primary_key=True, nullable=False),
-        sqlalchemy.Column('status', sqlalchemy.String(36)),
+        sqlalchemy.Column('status', sqlalchemy.Integer),
         sqlalchemy.Column('created_at', sqlalchemy.DateTime),
         sqlalchemy.Column('updated_at', sqlalchemy.DateTime),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
     sqlalchemy.Table('stack', meta, autoload=True)
-    resource_graph.create()
+    dependency_task_graph.create()
 
 def downgrade(migrate_engine):
     meta = sqlalchemy.MetaData()
     meta.bind = migrate_engine
 
-    resource_graph = sqlalchemy.Table(
-        'resource_graph', meta, autoload=True)
-    resource_graph.drop()
+    dependency_task_graph = sqlalchemy.Table(
+        'dependency_task_graph', meta, autoload=True)
+    dependency_task_graph.drop()

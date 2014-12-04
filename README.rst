@@ -75,3 +75,20 @@ TODO
   triggering right away.
 * Rollback should look back, at older versions, instead of blindly
   issuing another update.
+* Graph state should be integer type. Create enum for readabiliy.
+* Act based on CONVG_STATE instead of again loading the resource from
+  DB.
+* Change update logic to delete the resources first if rollabck is not
+  enabled. Deduce the sequence of GC from stack's disabled_rollback var.
+* Rollback should look in current template and decide on what needs to
+  be done Delete all the not found resources first and then update
+  remaining.
+* Determine if concurrent update is running by inspecting the incming
+  request_id and only if so, run filter to find scheduled/in_progress
+  versions of a resource.
+* Decouple resource from stack, or make stack optional so that resource
+  alone can be loaded by worker and converged.
+* Rename RsourceGraph -> DependencyTaskGraph.
+* Separate convergence worker for SoC.
+* Update logic in service.py can completely move to stack's update
+  method.

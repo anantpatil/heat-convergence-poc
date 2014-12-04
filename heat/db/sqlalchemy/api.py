@@ -940,7 +940,7 @@ class Transaction():
 
 
 def graph_insert_egde(context, value):
-    obj_ref = models.ResourceGraph()
+    obj_ref = models.DependencyTaskGraph()
     obj_ref.update(value)
     obj_ref.save(_session(context))
     return obj_ref
@@ -948,7 +948,7 @@ def graph_insert_egde(context, value):
 
 def graph_delete_egde(context, value):
     session = _session(context)
-    session.query(models.ResourceGraph).filter_by(**value).delete()
+    session.query(models.DependencyTaskGraph).filter_by(**value).delete()
 
 
 def graph_update(context, values):
@@ -959,16 +959,16 @@ def graph_update(context, values):
     session = _session(context)
     with session.begin():
         for val in values:
-            edge = session.query(models.ResourceGraph).filter_by(**val)
+            edge = session.query(models.DependencyTaskGraph).filter_by(**val)
             if edge.scalar():
                 edge.update(val)
             else:
-                session.add(models.ResourceGraph(**val))
+                session.add(models.DependencyTaskGraph(**val))
 
 
 def graph_get_all_by_stack(context, stack_id):
     """ Retrieves all the edges of the graph for the given stack. """
-    result = model_query(context, models.ResourceGraph).filter_by(
+    result = model_query(context, models.DependencyTaskGraph).filter_by(
                  stack_id=stack_id).all()
     return result
 
@@ -977,24 +977,24 @@ def graph_delete(context, stack_id):
     """ Deletes all the edges of the graph for the given stack. """
     session = _session(context)
     with session.begin():
-        session.query(models.ResourceGraph).filter_by(stack_id=stack_id).delete()
+        session.query(models.DependencyTaskGraph).filter_by(stack_id=stack_id).delete()
     session.flush()
 
 
 def get_resource_required_by(context, stack_id, resource_name):
-    result = model_query(context, models.ResourceGraph.needed_by).filter_by(
+    result = model_query(context, models.DependencyTaskGraph.needed_by).filter_by(
                             resource_name=resource_name, stack_id=stack_id).all()
     return [res for (res,) in result if res]
 
 
 def resource_exists_in_graph(context, stack_id, resource_name):
-    result = model_query(context, models.ResourceGraph.resource_name).filter_by(
+    result = model_query(context, models.DependencyTaskGraph.resource_name).filter_by(
                             resource_name=resource_name, stack_id=stack_id).all()
     return True if result else False
 
 
 def get_ready_nodes(context, stack_id, reverse):
-    rg = models.ResourceGraph
+    rg = models.DependencyTaskGraph
     if reverse:
         result = []
         # Fetch all the nodes which does not have a needed_by
@@ -1031,26 +1031,26 @@ def get_ready_nodes(context, stack_id, reverse):
         return query.distinct().all()
 
 
-def update_resource_traversal(context, stack_id, status, resource_name=None):
+def update_graph_traversal(context, stack_id, status, resource_name=None):
     filters = {'stack_id': stack_id}
     if resource_name:
         filters['resource_name'] = resource_name
     session = _session(context)
     with session.begin():
-        session.query(models.ResourceGraph).\
+        session.query(models.DependencyTaskGraph).\
             filter_by(**filters).\
             update({"status": status})
     session.flush()
 
 
-def resource_graph_delete_all_edges(context, stack_id, res_names):
+def dep_task_graph_delete_all_edges(context, stack_id, res_names):
     session = _session(context)
     with session.begin():
         for res_name in res_names:
-            session.query(models.ResourceGraph).\
+            session.query(models.DependencyTaskGraph).\
                 filter_by(stack_id=stack_id).\
-                filter(or_(models.ResourceGraph.resource_name == res_name,
-                        models.ResourceGraph.needed_by == res_name)).\
+                filter(or_(models.DependencyTaskGraph.resource_name == res_name,
+                        models.DependencyTaskGraph.needed_by == res_name)).\
                 delete()
     session.flush()
 
@@ -1063,6 +1063,6 @@ def resource_delete(context, resource_id):
 
 
 def get_all_resources_from_graph(context, stack_id):
-    result = model_query(context, models.ResourceGraph.resource_name).filter_by(
+    result = model_query(context, models.DependencyTaskGraph.resource_name).filter_by(
                             stack_id=stack_id).distinct().all()
     return [res for (res,) in result]

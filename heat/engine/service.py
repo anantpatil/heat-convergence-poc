@@ -524,10 +524,12 @@ class EngineService(service.Service):
 
 
     @request_context
-    def converge_resource(self, context, request_id, stack_id, resource_id, timeout):
-        stack = parser.Stack.load(context, stack_id=stack_id)
-        self.thread_group_mgr.start(stack_id, stack.do_converge,
-                                    request_id, resource_id, timeout)
+    def converge_resource(self, context, incoming_req_id, stack_id, resource_id,
+                          timeout):
+        from convg_worker import ConvergenceWorker
+        self.thread_group_mgr.start(stack_id, ConvergenceWorker.do_converge,
+                                    context, incoming_req_id, resource_id,
+                                    timeout)
 
     @request_context
     def notify_resource_observed(self, context, request_id, stack_id,
