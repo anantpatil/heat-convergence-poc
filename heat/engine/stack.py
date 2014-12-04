@@ -357,10 +357,27 @@ class Stack(collections.Mapping):
         """
         pass
 
-    def _schedule_delete_job(self, res_name):
+    def _schedule_gc_job(self, res_name):
         all_versions = resource.Resource.load_all_versions(self.context,
                                                            res_name,
                                                            self)
+        if len(all_versions) == 1:
+            # No older version; no op
+            return
+        # all versions are returned in descending order of version
+        curr_res = all_versions[0]
+        if (curr_res.action, curr_res.status) == (curr_res.DELETE, curr_res.INIT):
+            # marked for deletion, delete all versions
+            self._schedule_delete_job(all_versions=all_versions)
+        else:
+            # delete older versions
+            self._schedule_delete_job(all_versions=all_versions[1:])
+
+    def _schedule_delete_job(self, res_name, all_versions=None):
+        if not all_versions:
+            all_versions = resource.Resource.load_all_versions(self.context,
+                                                               res_name,
+                                                               self)
         for res in all_versions:
             if res.resource_id:
                 res.store_update(res.DELETE, res.SCHEDULED,
@@ -411,6 +428,7 @@ class Stack(collections.Mapping):
             ready_nodes, TASK_STATUS.SCHEDULED)
         return resources_in_progress is None or len(resources_in_progress) == 0
 
+
     def _schedule_convg_jobs(self, ready_nodes):
         # load the resource with their children to get realized rsrc_defn
         if (self.action, self.status) ==  (Stack.CREATE, Stack.IN_PROGRESS):
@@ -421,13 +439,17 @@ class Stack(collections.Mapping):
             [self._schedule_rollback_job_if_needed(res_name) for res_name, status in ready_nodes]
         elif (self.action, self.status) == (Stack.DELETE, Stack.IN_PROGRESS):
             [self._schedule_delete_job(res_name) for res_name, status in ready_nodes]
+        elif (self.action, self.status) in ((Stack.UPDATE, Stack.GC_IN_PROGRESS),
+                                            (Stack.ROLLBACK, Stack.GC_IN_PROGRESS)):
+            [self._schedule_gc_job(res_name) for res_name, status in ready_nodes]
         else:
             # TODO:
             raise Exception("Stack %s in unknown state: %s, %s", self.name,
                             self.action, self.status)
 
     def _trigger_GC(self):
-        self.state_set(self.action, self.GC_IN_PROGRESS)
+        reason = "Triggering GC for %s" % self.name
+        self.state_set(self.action, self.GC_IN_PROGRESS, reason)
         db_api.update_graph_traversal(self.context, self.id,
                                          TASK_STATUS.UN_SCHEDULED)
         self._trigger_convergence()

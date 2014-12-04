@@ -190,7 +190,7 @@ class Resource(object):
             if db_resource:
                 self.load_data(db_resource)
 
-    def copy(self):
+    def __copy__(self):
         return Resource(self.name, self.t, self.stack, load_from_db=True)
 
     @classmethod
