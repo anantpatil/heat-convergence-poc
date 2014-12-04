@@ -356,8 +356,8 @@ class Snapshot(BASE, HeatBase):
 
 class DependencyTaskGraph(BASE, HeatBase):
     """ Represents a graph of stack resources. """
-    statuses = (UN_TRAVERSED, SCHEDULED, TRAVERSED, DEFERRED_DELETE
-              ) = (0, 1, 2, 3)
+    statuses = (UN_TRAVERSED, SCHEDULED, TRAVERSED
+              ) = (0, 1, 2)
 
     __tablename__ = 'dependency_task_graph'
 

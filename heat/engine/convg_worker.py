@@ -20,7 +20,7 @@ LOG = logging.getLogger(__name__)
 
 class CONVERGE_RESPONSE:
     OK = 0      # Resource converged
-    PANIC = 1   # Detected update, can't proceed
+    PANIC = 1   # Woker detects new update to stack, panics
     FAILED = 2  # Attempted, but failed
 
 class ConvergenceWorker:
@@ -32,7 +32,7 @@ class ConvergenceWorker:
     def do_converge(context, incoming_req_id, stack_id, resource_id, timeout):
         stack = Stack.load(context, stack_id=stack_id)
         if incoming_req_id != stack.current_req_id():
-            # panic: probably new stack request was received, return fail
+            # panic: a new stack operation was issued
             stack.rpc_client.notify_resource_observed(
                 context, incoming_req_id, stack_id, resource_id,
                 CONVERGE_RESPONSE.PANIC)
@@ -40,7 +40,6 @@ class ConvergenceWorker:
             stack.resource_action_runner(resource_id, timeout)
         except Exception as e:
             LOG.exception(e)
-            # Don't set the stack state here
             stack.rpc_client.notify_resource_observed(context, incoming_req_id,
                                                      stack.id, resource_id,
                                                      CONVERGE_RESPONSE.FAILED)

@@ -56,10 +56,9 @@ class ForcedCancel(BaseException):
         return "Operation cancelled"
 
 class GRAPH_TRAVERSAL_STATE:
-    UN_TRAVERSED = 0
-    SCHEDULED = 1
-    TRAVERSED = 2
-    DEFERRED_DELETE = 3
+    UN_TRAVERSED = 0 # Task pending to be taken-up
+    SCHEDULED = 1    # Task running
+    TRAVERSED = 2    # Task done
 
 class Stack(collections.Mapping):
 
@@ -341,8 +340,10 @@ class Stack(collections.Mapping):
                 self._mark_res_as_scheduled(res_name)
         else:
             if old_res:
+                # Create a delete version and mark graph as done. In the resource
+                # clean-up phase, this will taken-up and cleaned.
                 self._create_delete_version(old_res)
-                self._mark_res_for_deferred_delete(res_name)
+                self._mark_res_as_done(res_name)
 
     def _schedule_rollback_job_if_needed(self, res_name):
         """
@@ -378,12 +379,7 @@ class Stack(collections.Mapping):
                                          GRAPH_TRAVERSAL_STATE.TRAVERSED,
                                          resource_name=res_name)
 
-    def _mark_res_for_deferred_delete(self, res_name):
-        db_api.update_graph_traversal(self.context, self.id,
-                                         GRAPH_TRAVERSAL_STATE.DEFERRED_DELETE,
-                                         resource_name=res_name)
-
-    def _filter_nodes_with_previous_version_scheduled(self, ready_nodes):
+    def _filter_nodes_with_previous_versions_scheduled(self, ready_nodes):
         # to avoid processing a resource having its older version in in progress
         in_progress_filters = {'status': resource.Resource.IN_PROGRESS}
         scheduled_filters = {'status': resource.Resource.SCHEDULED}
@@ -409,7 +405,7 @@ class Stack(collections.Mapping):
 
     def _graph_traversal_complete(self, ready_nodes):
         resources_in_progress =  self._get_nodes_matching_status(
-            ready_nodes, self.PROCESSING)
+            ready_nodes, GRAPH_TRAVERSAL_STATE.SCHEDULED)
         return resources_in_progress is None or len(resources_in_progress) == 0
 
     def _schedule_convg_jobs(self, ready_nodes):
@@ -447,7 +443,7 @@ class Stack(collections.Mapping):
         else:
             self.state_set(self.action, self.COMPLETE, reason)
 
-    def _trigger_convergence(self):
+    def _trigger_convergence(self, concurrent_update_on=False):
         if self._get_remaining_timeout_secs() <= 0:
             self.handle_timeout()
             return
@@ -455,12 +451,16 @@ class Stack(collections.Mapping):
         reverse = self._is_traversal_order_reverse()
         ready_nodes = db_api.get_ready_nodes(self.context, self.id,
                                              reverse=reverse)
-        unprocessed_nodes= self._get_nodes_matching_status(ready_nodes, self.UNPROCESSED)
-        if unprocessed_nodes:
-            if self.action in (self.UPDATE, self.ROLLBACK):
-                unprocessed_nodes = self._filter_nodes_with_previous_version_scheduled( unprocessed_nodes)
-            if unprocessed_nodes:
-                self._schedule_convg_jobs(unprocessed_nodes)
+        unscheduled_nodes= self._get_nodes_matching_status(ready_nodes,
+                                                           GRAPH_TRAVERSAL_STATE.UN_TRAVERSED)
+        if unscheduled_nodes:
+            if self.action in (self.UPDATE, self.ROLLBACK) and concurrent_update_on:
+                # If and only if there is a concurrent update going, do the
+                # following filtering to avoid scheduling converge jobs on
+                # resources already being converged.
+                unscheduled_nodes = self._filter_nodes_with_previous_versions_scheduled(unscheduled_nodes)
+            if unscheduled_nodes:
+                self._schedule_convg_jobs(unscheduled_nodes)
             else:
                 return
         else:
@@ -823,7 +823,7 @@ class Stack(collections.Mapping):
         new_stack._generate_new_req_id()
         new_stack.store()
         
-        # Mark all nodes as UNPROCESSED
+        # Mark all nodes as UN_TRAVERSED
         db_api.update_graph_traversal(self.context, new_stack.id,
                                          status=GRAPH_TRAVERSAL_STATE.UN_TRAVERSED)
 
