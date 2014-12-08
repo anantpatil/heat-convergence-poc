@@ -232,60 +232,65 @@ class Stack(collections.Mapping):
                 self.resources.itervalues())
         return self._dependencies
 
-    def get_dependencies_from_template(self):
+    def get_deps_from_current_template(self):
         return self._get_dependencies(self.resources.itervalues())
 
     def get_dependencies_from_db(self):
         deps = db_api.graph_get_all_by_stack(self.context, self.id)
         return deps
 
-    def _store_edges(self, resource_name, required_by):
-        value = {'resource_name': resource_name, 'stack_id': self.id}
+    def _store_edges(self, resource_name, required_by, template_id):
+        value = {'resource_name': resource_name, 'stack_id': self.id,
+                 'template_id':template_id}
         if required_by:
             for req in required_by:
                 value['needed_by'] = req
-                db_api.graph_insert_egde(self.context, value)
+                db_api.graph_insert_edge(self.context, value)
         else:
-            db_api.graph_insert_egde(self.context, value)
+            db_api.graph_insert_edge(self.context, value)
 
-    def store_dependencies(self):
-        deps = self.get_dependencies_from_template()
-        with db_api.transaction(self.context):
-            for res in deps:
-                required_by = [req.name for req in deps.required_by(res)]
-                self._store_edges(res.name, required_by)
+    def _update_edges(self, resource_name, required_by, template_id):
+        value = {'resource_name': resource_name, 'stack_id': self.id,
+                 'template_id':template_id}
+        for req in required_by:
+            value['needed_by'] = req
+            db_api.graph_update_edge(self.context, value)
 
     def update_dependencies(self):
-        new_deps = self.get_dependencies_from_template()
+        new_deps = self.get_deps_from_current_template()
+        previous_template_id = db_api.raw_template_get(self.context,
+                                    self.t.id).predecessor
+        # stack.store method is called multiple times in stack create.
+        # Remove below two lines when the calls are fixed.
+        if not previous_template_id:
+            previous_template_id = self.t.id
+
         with db_api.transaction(self.context):
             for res in new_deps:
-                value = {'resource_name': res.name, 'stack_id': self.id}
                 new_required_by = [req.name for req in
                                    new_deps.required_by(res)]
                 old_required_by = db_api.get_resource_required_by(self.context,
                                                                   self.id,
-                                                                  res.name)
+                                                                  res.name,
+                                                                  previous_template_id)
                 resource_exists = db_api.resource_exists_in_graph(self.context,
                                                                   self.id,
-                                                                  res.name)
+                                                                  res.name,
+                                                                  previous_template_id)
 
                 # if it is a new resource then insert all the edges for
                 # this resource
                 if not resource_exists:
-                    self._store_edges(res.name, new_required_by)
+                    self._store_edges(res.name, new_required_by, self.t.id)
+                
+                # update the template id for unchanged edges:
+                elif set(new_required_by) & set(old_required_by):
+                    unchanged_edges = set(old_required_by) & set(new_required_by)
+                    self._update_edges(res.name, unchanged_edges, self.t.id)
 
-                # if resource exists in new template but dependencies
-                # are changed
                 elif set(new_required_by) != set(old_required_by):
-                    deleted_edges = set(old_required_by) - set(new_required_by)
-                    for edge in deleted_edges:
-                        value = {'resource_name': res.name,
-                                 'needed_by': edge,
-                                 'stack_id': self.id }
-                        db_api.graph_delete_egde(self.context, value)
-
                     added_edges = set(new_required_by) - set(old_required_by)
-                    self._store_edges(res.name, added_edges)
+                    self._store_edges(res.name, added_edges, self.t.id)
 
     def _create_delete_version(self, res):
         del_res = copy.copy(res)
@@ -487,7 +492,7 @@ class Stack(collections.Mapping):
 
         reverse = self._is_traversal_order_reverse()
         ready_nodes = db_api.get_ready_nodes(self.context, self.id,
-                                             reverse=reverse)
+                                             self.t.id, reverse=reverse)
         unscheduled_nodes= self._get_nodes_matching_status(ready_nodes,
                                                            TASK_STATUS.UN_SCHEDULED)
         if unscheduled_nodes:
@@ -618,7 +623,6 @@ class Stack(collections.Mapping):
         }
         if self.id:
             db_api.stack_update(self.context, self.id, s)
-            self.update_dependencies()
         else:
             if not self.user_creds_id:
                 # Create a context containing a trust_id and trustor_user_id
@@ -635,8 +639,8 @@ class Stack(collections.Mapping):
             new_s = db_api.stack_create(self.context, s)
             self.id = new_s.id
             self.created_time = new_s.created_at
-            self.store_dependencies()
 
+        self.update_dependencies()
         self._set_param_stackid()
 
         return self.id

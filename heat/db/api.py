@@ -331,11 +331,14 @@ def graph_update(contex, values):
     return IMPL.graph_update(contex, values)
 
 
-def graph_insert_egde(contex, values):
+def graph_update_edge(contex, values):
+    return IMPL.graph_update_edge(contex, values)
+
+
+def graph_insert_edge(contex, values):
     return IMPL.graph_insert_egde(contex, values)
 
-
-def graph_delete_egde(contex, values):
+def graph_delete_edge(contex, values):
     return IMPL.graph_delete_egde(contex, values)
 
 
@@ -351,16 +354,18 @@ def transaction(context):
     return IMPL.Transaction(context)
 
 
-def get_resource_required_by(context, stack_id, resource_name):
-    return IMPL.get_resource_required_by(context, stack_id, resource_name)
+def get_resource_required_by(context, stack_id, resource_name, template_id):
+    return IMPL.get_resource_required_by(context, stack_id, resource_name,
+                                         template_id)
 
 
-def resource_exists_in_graph(context, stack_id, resource_name):
-    return IMPL.resource_exists_in_graph(context, stack_id, resource_name)
+def resource_exists_in_graph(context, stack_id, resource_name, template_id):
+    return IMPL.resource_exists_in_graph(context, stack_id, resource_name,
+                                         template_id)
 
 
-def get_ready_nodes(context, stack_id, reverse=False):
-        return IMPL.get_ready_nodes(context, stack_id, reverse)
+def get_ready_nodes(context, stack_id, template_id, reverse=False):
+    return IMPL.get_ready_nodes(context, stack_id, template_id, reverse)
 
 
 def update_graph_traversal(context, stack_id, status, resource_name=None):
@@ -388,3 +393,6 @@ def get_untraversed_edges(context, stack_id):
 
 def get_all_resources_from_graph(context, stack_id):
     return IMPL.get_all_resources_from_graph(context, stack_id)
+
+def get_stack_template_id(context, stack_id):
+    return IMPL.get_stack_template_id(context, stack_id)

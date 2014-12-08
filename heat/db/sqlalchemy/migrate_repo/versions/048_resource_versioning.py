@@ -21,11 +21,11 @@ def upgrade(migrate_engine):
     resource = sqlalchemy.Table('resource', meta, autoload=True)
     # (ckmvishnu) make nullable=True and remove default values
     # along with backup stack removal.
-    version = sqlalchemy.Column('version',
-                                sqlalchemy.Integer,
-                                default=0,
-                                server_default='0')
-    version.create(resource)
+    template_id = sqlalchemy.Column('template_id',
+                                    sqlalchemy.Integer,
+                                    default=0,
+                                    server_default='0')
+    template_id.create(resource)
 
 
 def downgrade(migrate_engine):

@@ -210,7 +210,7 @@ class Resource(object):
     def load_data(self, resource):
         '''Load the resource state from its DB representation.'''
         self.resource_id = resource.nova_instance
-        self.version = resource.version
+        self.template_id = resource.template_id
         self.action = resource.action
         self.status = resource.status
         self.status_reason = resource.status_reason

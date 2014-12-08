@@ -26,6 +26,7 @@ def upgrade(migrate_engine):
         sqlalchemy.Column('stack_id', sqlalchemy.String(36),
                           sqlalchemy.ForeignKey('stack.id'),
                           primary_key=True, nullable=False),
+        sqlalchemy.Column('template_id', sqlalchemy.Integer),
         sqlalchemy.Column('status', sqlalchemy.Integer),
         sqlalchemy.Column('created_at', sqlalchemy.DateTime),
         sqlalchemy.Column('updated_at', sqlalchemy.DateTime),

@@ -244,7 +244,7 @@ class Resource(BASE, HeatBase, StateAware):
     stack_id = sqlalchemy.Column(sqlalchemy.String(36),
                                  sqlalchemy.ForeignKey('stack.id'),
                                  nullable=False)
-    version = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+    template_id = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     stack = relationship(Stack, backref=backref('resources'))
     data = relationship(ResourceData,
                         cascade="all,delete",
@@ -374,5 +374,7 @@ class DependencyTaskGraph(BASE, HeatBase):
     stack_id = sqlalchemy.Column('stack_id', sqlalchemy.String(36),
                                  sqlalchemy.ForeignKey('stack.id'),
                                  primary_key=True,nullable=False)
+    template_id = sqlalchemy.Column('template_id', sqlalchemy.Integer,
+                                    default=0)
     status = sqlalchemy.Column('status', sqlalchemy.Integer,
                                default=TASK_STATUS.UN_SCHEDULED)

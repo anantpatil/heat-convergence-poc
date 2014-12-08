@@ -145,8 +145,8 @@ def resource_get_by_name_and_stack(context, resource_name, stack_id, version=Non
         result = model_query(context, models.Resource).\
             filter_by(name=resource_name).\
             filter_by(stack_id=stack_id).\
-            filter(models.Resource.version.in_(
-                model_query(context, func.max(models.Resource.version)).\
+            filter(models.Resource.template_id.in_(
+                model_query(context, func.max(models.Resource.template_id)).\
                 filter_by(name=resource_name, stack_id=stack_id).subquery())).\
             options(orm.joinedload("data")).first()
 
@@ -157,7 +157,7 @@ def resource_get_all_versions_by_name_and_stack(context, resource_name, stack_id
     result = model_query(context, models.Resource). \
         filter_by(name=resource_name). \
         filter_by(stack_id=stack_id). \
-        order_by(models.Resource.version.desc()). \
+        order_by(models.Resource.template_id.desc()). \
         options(orm.joinedload("data")).all()
     return result
 
@@ -951,20 +951,13 @@ def graph_delete_egde(context, value):
     session.query(models.DependencyTaskGraph).filter_by(**value).delete()
 
 
-def graph_update(context, values):
-    """
-    Updates the graph table with the values. If a graph edge does
-    not exists in the database then add that edge.
-    """
+def graph_update_edge(context, value):
     session = _session(context)
-    with session.begin():
-        for val in values:
-            edge = session.query(models.DependencyTaskGraph).filter_by(**val)
-            if edge.scalar():
-                edge.update(val)
-            else:
-                session.add(models.DependencyTaskGraph(**val))
-
+    session.query(models.DependencyTaskGraph).\
+            filter_by(resource_name=value['resource_name'],
+                      needed_by=value['needed_by'],
+                      stack_id=value['stack_id']).\
+                      update({"template_id": value['template_id']})
 
 def graph_get_all_by_stack(context, stack_id):
     """ Retrieves all the edges of the graph for the given stack. """
@@ -981,19 +974,21 @@ def graph_delete(context, stack_id):
     session.flush()
 
 
-def get_resource_required_by(context, stack_id, resource_name):
+def get_resource_required_by(context, stack_id, resource_name, template_id):
     result = model_query(context, models.DependencyTaskGraph.needed_by).filter_by(
-                            resource_name=resource_name, stack_id=stack_id).all()
+                            resource_name=resource_name, stack_id=stack_id,
+                            template_id=template_id).all()
     return [res for (res,) in result if res]
 
 
-def resource_exists_in_graph(context, stack_id, resource_name):
+def resource_exists_in_graph(context, stack_id, resource_name, template_id):
     result = model_query(context, models.DependencyTaskGraph.resource_name).filter_by(
-                            resource_name=resource_name, stack_id=stack_id).all()
+                            resource_name=resource_name, stack_id=stack_id,
+                            template_id=template_id).all()
     return True if result else False
 
 
-def get_ready_nodes(context, stack_id, reverse):
+def get_ready_nodes(context, stack_id, template_id, reverse):
     tg = models.DependencyTaskGraph
     task_status = tg.TASK_STATUS
     if reverse:
@@ -1002,21 +997,25 @@ def get_ready_nodes(context, stack_id, reverse):
         nodes_without_needed_by = model_query(context, tg.resource_name, tg.status).\
                                     filter(tg.status != task_status.DONE).\
                                     filter(tg.stack_id == stack_id).\
+                                    filter(tg.template_id == template_id).\
                                     filter(tg.needed_by == '').all()
         # Fetch all nodes which are processed
         processed_nodes = [res for (res,) in model_query(context, tg.resource_name).\
                                                 filter(tg.status == task_status.DONE).\
+                                                filter(tg.template_id == template_id).\
                                                 filter(tg.stack_id == stack_id).all()]
         # Fetch all nodes whose even one needed_by is processed
         next_nodes = model_query(context, tg.resource_name, tg.status).\
                         filter(tg.status != task_status.DONE).\
                         filter(tg.stack_id == stack_id).\
+                        filter(tg.template_id == template_id).\
                         filter(tg.needed_by.in_(processed_nodes)).distinct().all()
 
         # Filter out the nodes for which all needed_by are not processed
         for node, status in next_nodes:
             needed_by_nodes = [res for (res,) in model_query(context, tg.needed_by).\
                                                     filter(tg.resource_name == node).\
+                                                    filter(tg.template_id == template_id).\
                                                     filter(tg.stack_id == stack_id).all()]
             if set(needed_by_nodes).issubset(set(processed_nodes)):
                 result.append((node, status))
@@ -1025,9 +1024,11 @@ def get_ready_nodes(context, stack_id, reverse):
         query = model_query(context, tg.resource_name, tg.status).\
                 filter(tg.status != task_status.DONE).\
                 filter(tg.stack_id == stack_id).\
+                filter(tg.template_id == template_id).\
                 filter(~tg.resource_name.in_(
                     model_query(context, tg.needed_by).\
                     filter(tg.status != task_status.DONE).\
+                    filter(tg.template_id == template_id).\
                     filter(tg.stack_id == stack_id).subquery()))
         return query.distinct().all()
 
@@ -1067,3 +1068,6 @@ def get_all_resources_from_graph(context, stack_id):
     result = model_query(context, models.DependencyTaskGraph.resource_name).filter_by(
                             stack_id=stack_id).distinct().all()
     return [res for (res,) in result]
+
+def get_stack_template_id(context, stack_id):
+    return
