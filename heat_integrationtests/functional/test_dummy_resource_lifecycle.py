@@ -81,6 +81,36 @@ resources:
                           stack_name=stack_name,
                           template=self.template)
 
+    def test_create_stack_rollback(self):
+        stack_name = self._stack_rand_name()
+        template = '''
+heat_template_version: 2013-05-23
+resources:
+  dummy1:
+    type: OS::Heat::Dummy
+    properties:
+      name_len: 32
+      max_wait_secs: 0.2
+      fail_prop: "yes"
+'''
+        self.client.stacks.create(
+            stack_name=stack_name,
+            template=template,
+            files={},
+            disable_rollback=False,
+            parameters={},
+            environment={}
+        )
+        stack = self.client.stacks.get(stack_name)
+        stack_identifier = '%s/%s' % (stack_name, stack.id)
+        self._wait_for_stack_status(stack_identifier, 'ROLLBACK_COMPLETE')
+        self.addCleanup(self.client.stacks.delete, stack_name)
+
+        expected_resources = {}
+        self.assertEqual(expected_resources,
+                         self.list_resources(stack_identifier))
+
+
 class UpdateStackTest(test.HeatIntegrationTest):
     template = '''
 heat_template_version: 2013-05-23
@@ -220,9 +250,49 @@ resources:
         self.assertEqual(expected_resources,
                          self.list_resources(stack_identifier))
 
-    def test_update_stack_concurrent(self):
+    def test_update_stack_remove_resource(self):
         stack_name = self._stack_rand_name()
         stack_identifier = self._create_and_verify_stack(stack_name)
+
+        # add a new resource in update
+        template = '''
+heat_template_version: 2013-05-23
+resources:
+  dummy1:
+    type: OS::Heat::Dummy
+    properties:
+      name_len: 32
+      max_wait_secs: 0.2
+  dummy2:
+    type: OS::Heat::Dummy
+    properties:
+      name_len: 64
+      max_wait_secs: 0.2
+'''
+        self.update_stack(stack_identifier, template)
+        expected_resources = {'dummy1': 'OS::Heat::Dummy',
+                              'dummy2': 'OS::Heat::Dummy'}
+        self.assertEqual(expected_resources,
+                         self.list_resources(stack_identifier))
+
+        template = '''
+heat_template_version: 2013-05-23
+resources:
+  dummy1:
+    type: OS::Heat::Dummy
+    properties:
+      name_len: 32
+      max_wait_secs: 0.2
+'''
+        self.update_stack(stack_identifier, template)
+        expected_resources = {'dummy1': 'OS::Heat::Dummy'}
+        self.assertEqual(expected_resources,
+                         self.list_resources(stack_identifier))
+
+    def test_update_stack_concurrent(self):
+        stack_name = self._stack_rand_name()
+        stack_identifier = self._create_and_verify_stack(stack_name,
+                                                         verify_create=False)
 
         # Update with an additional resource
         template1 = '''
@@ -231,7 +301,7 @@ resources:
   dummy1:
     type: OS::Heat::Dummy
     properties:
-      name_len: 64
+      name_len: 32
       max_wait_secs: 0.2
   dummy2:
     type: OS::Heat::Dummy
@@ -264,3 +334,86 @@ resources:
         expected_resources = {'dummy3': 'OS::Heat::Dummy'}
         self.assertEqual(expected_resources,
                          self.list_resources(stack_identifier))
+
+    def test_update_stack_in_place(self):
+        stack_name = self._stack_rand_name()
+        stack_identifier = self._create_and_verify_stack(stack_name)
+        expected_resources = {'dummy1': 'OS::Heat::Dummy'}
+        self.assertEqual(expected_resources,
+                         self.list_resources(stack_identifier))
+
+        rsrc = self.client.resources.get(stack_identifier, 'dummy1')
+        phy_rsrc_id_before_update = rsrc.physical_resource_id
+
+        # add a new resource in update
+        template = '''
+heat_template_version: 2013-05-23
+resources:
+  dummy1:
+    type: OS::Heat::Dummy
+    properties:
+      name_len: 32
+      max_wait_secs: 0.2
+      update_in_place_prop: 'yes'
+'''
+        self.update_stack(stack_identifier, template)
+        expected_resources = {'dummy1': 'OS::Heat::Dummy'}
+        self.assertEqual(expected_resources,
+                         self.list_resources(stack_identifier))
+        rsrc = self.client.resources.get(stack_identifier, 'dummy1')
+        phy_rsrc_id_after_update = rsrc.physical_resource_id
+
+        self.assertEqual(phy_rsrc_id_before_update, phy_rsrc_id_after_update)
+
+    def test_update_stack_rollback(self):
+        stack_name = self._stack_rand_name()
+        template1 = '''
+heat_template_version: 2013-05-23
+resources:
+  dummy1:
+    type: OS::Heat::Dummy
+    properties:
+      name_len: 64
+      max_wait_secs: 0.2
+'''
+        stack_identifier = self._create_and_verify_stack(stack_name,
+                                                         template=template1)
+        stack_name = stack_identifier.split('/')[0]
+
+        # Update with a single (new) resource.
+        template2 = '''
+heat_template_version: 2013-05-23
+resources:
+  dummy2:
+    type: OS::Heat::Dummy
+    properties:
+      name_len: 64
+      max_wait_secs: 0.2
+      fail_prop: "yes"
+'''
+        self.client.stacks.update(
+            stack_id=stack_identifier,
+            stack_name=stack_name,
+            template=template2,
+            files={},
+            disable_rollback=False,
+            parameters={},
+            environment={}
+        )
+        self._wait_for_stack_status(stack_identifier, 'ROLLBACK_COMPLETE')
+        expected_resources = {'dummy1': 'OS::Heat::Dummy'}
+        self.assertEqual(expected_resources,
+                         self.list_resources(stack_identifier))
+
+'''1. Basic Create/Update/Delete - Done
+2. Concurrent Update - Already done
+3. Update Cleanup(TODO)
+4. Create RollBack - Done
+6. Update InPlace/Replace -Inplace Done
+
+Deferred
+--------
+5. Update RollBack(TODO) - Done
+7. Invert deps
+8. Graph permutations w/ RollBack
+'''
