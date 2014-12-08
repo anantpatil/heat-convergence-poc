@@ -1069,5 +1069,16 @@ def get_all_resources_from_graph(context, stack_id):
                             stack_id=stack_id).distinct().all()
     return [res for (res,) in result]
 
-def get_stack_template_id(context, stack_id):
-    return
+
+def get_res_children(context, template_id, parent):
+    result = model_query(context, models.DependencyTaskGraph.resource_name).\
+        filter_by(template_id=template_id, needed_by=parent).distinct().all()
+    return [res for (res,) in result]
+
+
+def resource_get_by_and_template_id(context, res_name, template_id):
+    result = model_query(context, models.Resource). \
+        filter_by(name=res_name). \
+        filter_by(template_id=template_id).\
+        options(orm.joinedload("data")).first()
+    return result

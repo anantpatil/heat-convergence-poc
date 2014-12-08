@@ -368,9 +368,9 @@ def get_ready_nodes(context, stack_id, template_id, reverse=False):
     return IMPL.get_ready_nodes(context, stack_id, template_id, reverse)
 
 
-def update_graph_traversal(context, stack_id, status, resource_name=None):
+def update_graph_traversal(context, stack_id, status, resource_name=None, template_id=None):
     return IMPL.update_graph_traversal(context, stack_id, status,
-                                          resource_name)
+                                          resource_name=resource_name, template_id=template_id)
 
 
 def resource_get_all_versions_by_name_and_stack(context, resource_name,
@@ -396,3 +396,11 @@ def get_all_resources_from_graph(context, stack_id):
 
 def get_stack_template_id(context, stack_id):
     return IMPL.get_stack_template_id(context, stack_id)
+
+
+def get_res_children(context, template_id, parent):
+    return IMPL.get_res_children(context, template_id, parent)
+
+
+def  resource_get_by_name_and_template_id(context, res_name, template_id):
+    return IMPL.resource_get_by_and_template_id(context, res_name, template_id)

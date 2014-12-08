@@ -12,7 +12,6 @@
 #    under the License.
 
 import collections
-import copy
 from oslo.utils import timeutils
 import re
 
@@ -188,7 +187,7 @@ class Stack(collections.Mapping):
             self._rsrc_defns = self.t.resource_definitions(self)
         return self._rsrc_defns
 
-    def load_res_children(self, res_name):
+    def _load_res_children(self, res_name):
         """
         Load the dependents of resource with given res_name along with the
         resource. All immediate children are loaded.
@@ -292,16 +291,7 @@ class Stack(collections.Mapping):
                     added_edges = set(new_required_by) - set(old_required_by)
                     self._store_edges(res.name, added_edges, self.t.id)
 
-    def _create_delete_version(self, res):
-        del_res = copy.copy(res)
-        del_res.id = None # avoid overwriting the old resource
-        del_res.version += 1
-        del_res.store_update(res.DELETE, res.INIT, "Marked for deletion")
-
-        res.resource_id = None
-        res.store_update(res.action, res.status, "Removed physical id for deletion")
-
-    def _persis_update_version(self, new_res, old_res):
+    def _persist_update_version(self, new_res, old_res):
         new_res.version = old_res.version + 1
         if old_res.action == old_res.DELETE:
             # if the resource was scheduled for deletion, create
@@ -315,108 +305,91 @@ class Stack(collections.Mapping):
         self.rpc_client.converge_resource(self.context, self.current_req_id(),
                                           self.id, res.id,
                                           self._get_remaining_timeout_secs())
-        self._mark_res_as_scheduled(res_name)
+        self._mark_task_as_scheduled(res_name, template_id=self.t.id)
 
     def _resource_exists_in_current_template(self, res_name):
         return self.resource_definitions.has_key(res_name)
 
     def _schedule_update_job_if_needed(self, res_name):
-        db_res = db_api.resource_get_by_name_and_stack(self.context,
-                                                       res_name,
-                                                       self.id)
-        old_res = None
-        if db_res:
-            old_res = resource.Resource.load(db_res, self)
-
-        if self._resource_exists_in_current_template(res_name):
-            new_res_defn = self.resource_definitions[res_name]
-            new_res = resource.Resource(res_name, new_res_defn, self)
-            if old_res:
-                if old_res.needs_update(new_res.t):
-                    self._persis_update_version(new_res, old_res)
-                    old_res.state_set(old_res.UPDATE, old_res.SCHEDULED,
-                                      "Scheduled for update.")
-                    self.rpc_client.converge_resource(
-                        self.context, self.current_req_id(), self.id,
-                        old_res.id, self._get_remaining_timeout_secs())
-                    self._mark_res_as_scheduled(res_name)
-                else:
-                    # Nothing needs to be done
-                    self._mark_res_as_done(res_name)
-            else:
-                new_res.state_set(new_res.CREATE, new_res.SCHEDULED)
-                self.rpc_client.converge_resource(
-                    self.context, self.current_req_id(), self.id, new_res.id,
-                    self._get_remaining_timeout_secs())
-                self._mark_res_as_scheduled(res_name)
-        else:
-            if old_res:
-                # Create a delete version and mark graph as done. In the resource
-                # clean-up phase, this will taken-up and cleaned.
-                self._create_delete_version(old_res)
-                self._mark_res_as_done(res_name)
-
-    def _schedule_rollback_job_if_needed(self, res_name):
         """
-        Rollback logic is bit different from update logic even though
-        it is an update to exisitng stack.
+        Look back for any matching resource definitions.
         :param res_name:
         :return:
         """
-        pass
-
-    def _schedule_gc_job(self, res_name):
-        all_versions = resource.Resource.load_all_versions(self.context,
-                                                           res_name,
-                                                           self)
-        if len(all_versions) == 1:
-            # No older version; no op
-            LOG.debug("==== No older versions of %s were found for clean-up"
-                      % res_name)
-            self._mark_res_as_done(res_name)
-            return
-        # all versions are returned in descending order of version
-        curr_res = all_versions[0]
-        if (curr_res.action, curr_res.status) == (curr_res.DELETE, curr_res.INIT):
-            # marked for deletion, delete all versions
-            self._schedule_delete_job(res_name, versions_to_del=all_versions)
-        else:
-            # delete older versions
-            self._schedule_delete_job(res_name, versions_to_del=all_versions[1:])
-
-    def _schedule_delete_job(self, res_name, versions_to_del=None):
-        if not versions_to_del:
-            versions_to_del = resource.Resource.load_all_versions(self.context,
-                                                               res_name,
-                                                               self)
-        no_version_was_scheduled_for_deletion = True
-        for res in versions_to_del:
-            if res.resource_id:
-                res.store_update(res.DELETE, res.SCHEDULED,
-                                 "Scheduled for deletion")
-                self.rpc_client.converge_resource(
-                    self.context, self.current_req_id(), self.id, res.id,
-                    self._get_remaining_timeout_secs())
-                self._mark_res_as_scheduled(res_name)
-                no_version_was_scheduled_for_deletion = False
+        all_versions = resource.Resource.load_all_versions(self.context, res_name, self)
+        self._load_res_children(res_name)
+        if self._resource_exists_in_current_template(res_name):
+            new_res = self.resources[res_name]
+            for old_res in all_versions:
+                if old_res.matches_defn(new_res.t):
+                    # This is the one, update the template ID of this res
+                    # TODO: update template_id for this resource
+                    old_res.template_id = new_res.template_id
+                    old_res.store_or_update(old_res.UPDATE, old_res.COMPLETE)
+                    break
             else:
-                db_api.resource_delete(self.context, res.id)
+                # update or create. Load children resources to staisfy any get_attr
+                # dependency for this resource
+                if all_versions:
+                    curr_res = all_versions[0]
+                    self._persist_update_version(new_res, curr_res)
+                    curr_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
+                                      "Scheduled for update.")
+                    self.rpc_client.converge_resource(self.context,
+                                                      self.current_req_id(),
+                                                      self.id, curr_res.id,
+                                                      self._get_remaining_timeout_secs())
+                    self._mark_task_as_scheduled(res_name, template_id=self.t.id)
+                else:
+                    # create new version
+                    new_res.state_set(new_res.CREATE, new_res.SCHEDULED)
+                    self.rpc_client.converge_resource(
+                        self.context, self.current_req_id(), self.id, new_res.id,
+                        self._get_remaining_timeout_secs())
+                    self._mark_task_as_scheduled(res_name, template_id=self.t.id)
+        else:
+            # No-op. Will be deleted in resource clean-up pahse
+            self._mark_task_as_done(res_name, template_id=self.t.id)
 
-        if no_version_was_scheduled_for_deletion:
-            # at least one version was scheduled to worker
-            self._mark_res_as_done(res_name)
+    def _schedule_delete_job(self, res_name, template_id):
+        db_res = db_api.resource_get_by_name_and_template_id(self.context,
+                                                             res_name,
+                                                             template_id)
+        if db_res:
+            res = resource.Resource.load(db_res, self)
+            res.store_update(res.DELETE, res.SCHEDULED, "Scheduled for deletion")
+            self.rpc_client.converge_resource( self.context,
+                                               self.current_req_id(),
+                                               self.id, res.id,
+                                               self._get_remaining_timeout_secs())
+            self._mark_task_as_scheduled(res_name, template_id)
 
-    def _mark_res_as_scheduled(self, res_name):
+    def _schedule_gc_job(self, res_name, template_id):
+        if template_id != self.t.id:
+            return self._schedule_delete_job(res_name, template_id)
+        # search for older versions and delete
+        all_versions = resource.Resource.load_all_versions(self.context, res_name, self)
+        for res in all_versions:
+            # del if resource is not current
+            if res.template_id != self.t.id:
+                res.store_update(res.DELETE, res.SCHEDULED, "Scheduled for deletion")
+                self.rpc_client.converge_resource( self.context,
+                                                   self.current_req_id(),
+                                                   self.id, res.id,
+                                                   self._get_remaining_timeout_secs())
+        self._mark_task_as_done(res_name, template_id)
+
+    def _mark_task_as_scheduled(self, res_name, template_id):
         db_api.update_graph_traversal(self.context, self.id,
-                                         TASK_STATUS.SCHEDULED,
-                                         resource_name=res_name)
+                                      TASK_STATUS.SCHEDULED,
+                                      resource_name=res_name, template_id=template_id)
 
-    def _mark_res_as_done(self, res_name):
+    def _mark_task_as_done(self, res_name, template_id):
         db_api.update_graph_traversal(self.context, self.id,
-                                         TASK_STATUS.DONE,
-                                         resource_name=res_name)
+                                      TASK_STATUS.DONE,
+                                      resource_name=res_name, template_id=template_id)
 
-    def _filter_nodes_with_previous_versions_scheduled(self, ready_nodes):
+    def _filter_tasks_with_previous_versions_scheduled(self, ready_nodes):
         # to avoid processing a resource having its older version in in progress
         in_progress_filters = {'status': resource.Resource.IN_PROGRESS}
         scheduled_filters = {'status': resource.Resource.SCHEDULED}
@@ -440,20 +413,15 @@ class Stack(collections.Mapping):
         ]
         return nodes
 
-    def _graph_traversal_complete(self, ready_nodes):
-        resources_in_progress =  self._get_nodes_matching_status(
-            ready_nodes, TASK_STATUS.SCHEDULED)
-        return resources_in_progress is None or len(resources_in_progress) == 0
-
-
     def _schedule_convg_jobs(self, ready_nodes):
         # load the resource with their children to get realized rsrc_defn
+        if not self._destructive_action_in_progress():
+            self._load_all_children(ready_nodes)
         if (self.action, self.status) ==  (Stack.CREATE, Stack.IN_PROGRESS):
             [self._schedule_create_job(res_name) for res_name, status in ready_nodes]
-        elif (self.action, self.status) == (Stack.UPDATE, Stack.IN_PROGRESS):
+        elif (self.action, self.status) in ((Stack.UPDATE, Stack.IN_PROGRESS),
+                                            (Stack.ROLLBACK, Stack.IN_PROGRESS)):
             [self._schedule_update_job_if_needed(res_name) for res_name, status in ready_nodes]
-        elif (self.action, self.status) == (Stack.ROLLBACK, Stack.IN_PROGRESS):
-            [self._schedule_rollback_job_if_needed(res_name) for res_name, status in ready_nodes]
         elif (self.action, self.status) == (Stack.DELETE, Stack.IN_PROGRESS):
             [self._schedule_delete_job(res_name) for res_name, status in ready_nodes]
         elif (self.action, self.status) in ((Stack.UPDATE, Stack.GC_IN_PROGRESS),
@@ -464,19 +432,9 @@ class Stack(collections.Mapping):
             raise Exception("Stack %s in unknown state: %s, %s", self.name,
                             self.action, self.status)
 
-    def _trigger_GC(self):
-        reason = "Triggering GC for %s" % self.name
-        self.state_set(self.action, self.GC_IN_PROGRESS, reason)
-        db_api.update_graph_traversal(self.context, self.id,
-                                         TASK_STATUS.UN_SCHEDULED)
-        self._trigger_convergence()
-
     def _handle_stack_action_complete(self):
         reason = "%s complete" % self.action
-        if (self.action, self.status) in ((self.UPDATE, self.IN_PROGRESS),
-                                          (self.ROLLBACK, self.IN_PROGRESS)):
-            self._trigger_GC()
-        elif self._destructive_action_in_progress():
+        if self._destructive_action_in_progress():
             if self.action == self.DELETE:
                 self.delete_complete()
             else:
@@ -485,59 +443,74 @@ class Stack(collections.Mapping):
         else:
             self.state_set(self.action, self.COMPLETE, reason)
 
-    def _trigger_convergence(self, concurrent_update_on=False):
+    def _get_begining_template_id(self):
+        if not self.t.predecessor:
+            return self.t.id
+        predecessor_id = self.t.predecessor
+        while predecessor_id:
+            predecessor_id = db_api.raw_template_get(predecessor_id).predecessor
+
+    def _get_succcessor(self, template_id):
+        values = {'predecessor': template_id}
+        return db_api.raw_template_get_by_values(values)
+
+    def _prepare_tasks(self, curr_template_id):
+        """
+        If update, current template is the template id.
+        If GC_IN_PROGRESS, template ID is previous to current.
+        :return:
+        """
+        if not curr_template_id:
+            return
+
+        reverse = self._is_traversal_order_reverse()
+        running_or_unscheduled_tasks = db_api.get_ready_nodes(self.context,
+                                                              self.id,
+                                                              curr_template_id,
+                                                              reverse)
+        if not running_or_unscheduled_tasks:
+            if (self.action, self.status) in ((self.CREATE, self.IN_PROGRESS),
+                                              (self.DELETE, self.IN_PROGRESS)):
+                self._handle_stack_action_complete()
+            elif (self.action, self.status) in ((self.ROLLBACK, self.IN_PROGRESS),
+                                                (self.UPDATE, self.IN_PROGRESS)):
+                self.state_set(self.action, self.GC_IN_PROGRESS, 'Resource clean up running')
+                db_api.update_graph_traversal(self.context, self.id,
+                                              status=TASK_STATUS.UN_SCHEDULED)
+                return self._prepare_tasks(self._get_begining_template_id())
+            elif (self.action, self.status) in ((self.ROLLBACK, self.GC_IN_PROGRESS),
+                                                (self.UPDATE, self.GC_IN_PROGRESS)):
+                return self._prepare_tasks(self._get_succcessor(curr_template_id))
+
+        unscheduled_tasks= self._get_tasks_matching_status(running_or_unscheduled_tasks,
+                                                           TASK_STATUS.UN_SCHEDULED)
+        running_tasks = set(running_or_unscheduled_tasks) - set(unscheduled_tasks)
+        return unscheduled_tasks, running_tasks
+
+    def _trigger_convergence(self, curr_template_id=None, concurrent_update_on=False):
         if self._get_remaining_timeout_secs() <= 0:
             self.handle_timeout()
             return
 
-        reverse = self._is_traversal_order_reverse()
-        ready_nodes = db_api.get_ready_nodes(self.context, self.id,
-                                             self.t.id, reverse=reverse)
-        unscheduled_nodes= self._get_nodes_matching_status(ready_nodes,
-                                                           TASK_STATUS.UN_SCHEDULED)
-        if unscheduled_nodes:
+        curr_template_id = curr_template_id or self.t.id
+        unscheduled_tasks, running_tasks = self._prepare_tasks(curr_template_id)
+        if unscheduled_tasks:
             if self.action in (self.UPDATE, self.ROLLBACK) and concurrent_update_on:
                 # If and only if there is a concurrent update going, do the
                 # following filtering to avoid scheduling converge jobs on
                 # resources already being converged.
-                unscheduled_nodes = self._filter_nodes_with_previous_versions_scheduled(unscheduled_nodes)
-            if unscheduled_nodes:
-                self._schedule_convg_jobs(unscheduled_nodes)
+                unscheduled_tasks = self._filter_tasks_with_previous_versions_scheduled(unscheduled_tasks)
+            if unscheduled_tasks:
+                self._schedule_convg_jobs(unscheduled_tasks)
                 # make sure to schedule next set of nodes if in the previous run of this
                 # did not yield any job.
-                self._trigger_convergence(concurrent_update_on=concurrent_update_on)
+                self._trigger_convergence(curr_template_id=curr_template_id,
+                                          concurrent_update_on=concurrent_update_on)
             else:
                 return
         else:
-            if self._graph_traversal_complete(ready_nodes):
+            if not running_tasks:
                 self._handle_stack_action_complete()
-
-    def reset_dependencies(self):
-        self._dependencies = None
-
-    @property
-    def root_stack(self):
-        '''
-        Return the root stack if this is nested (otherwise return self).
-        '''
-        if (self.parent_resource and self.parent_resource.stack):
-            return self.parent_resource.stack.root_stack
-        return self
-
-    def total_resources(self):
-        '''
-        Return the total number of resources in a stack, including nested
-        stacks below.
-        '''
-        def total_nested(res):
-            get_nested = getattr(res, 'nested', None)
-            if callable(get_nested):
-                nested_stack = get_nested()
-                if nested_stack is not None:
-                    return nested_stack.total_resources()
-            return 0
-
-        return len(self) + sum(total_nested(res) for res in self.itervalues())
 
     def _set_param_stackid(self):
         '''
@@ -581,6 +554,22 @@ class Stack(collections.Mapping):
                                       show_deleted, show_nested) or []
         for stack in stacks:
             yield cls._from_db(context, stack, resolve_data=resolve_data)
+
+    def _load_all_children(self, parents):
+        if self._resources:
+            return self._resources
+        all_children = []
+        for parent in parents:
+            all_children += db_api.get_res_children(self.context, self.t.id, parent)
+        resources_to_be_loaded = all_children + parents
+        self._resources = dict((name, resource.Resource(name, data, self, load_from_db=True))
+                               for (name, data) in
+                               self.resource_definitions.items()
+                                if name in resources_to_be_loaded)
+        # There is no need to continue storing the db resources
+        # after resource creation
+        self._db_resources = None
+        return self._resources
 
     @classmethod
     def _from_db(cls, context, stack, parent_resource=None, resolve_data=True,
@@ -808,6 +797,12 @@ class Stack(collections.Mapping):
 
     def create_start(self):
         self.state_set(self.CREATE, self.IN_PROGRESS, "Started creating")
+        empty_template = {'heat_template_version': self.t.version[1]}
+        raw_template = Template(empty_template)
+        successor = self.t.id
+        self.t = raw_template
+        self.t.predecessor = successor.id
+        self.store()
         self._trigger_convergence()
 
     @scheduler.wrappertask
@@ -1035,9 +1030,9 @@ class Stack(collections.Mapping):
             res.attributes.reset_resolved_values()
 
     def rollback(self):
-        if self.t.predecessor:
-            raw_template = Template.load(self.context,
-                                         self.t.predecessor)
+        last_complete_template = self._get_begining_template_id()
+        if last_complete_template:
+            raw_template = Template.load(self.context,last_complete_template)
         else:
             # NOTE: update with an empty template to DELETE the stack.
             empty_template = {'heat_template_version': self.t.version[1]}
@@ -1085,7 +1080,7 @@ class Stack(collections.Mapping):
         reverse = self._is_traversal_order_reverse()
         ready_nodes = db_api.get_ready_nodes(self.context, self.id,
                                              reverse=reverse)
-        processing_nodes = self._get_nodes_matching_status(
+        processing_nodes = self._get_tasks_matching_status(
                                  ready_nodes, TASK_STATUS.SCHEDULED)
         if not processing_nodes:
             # Rollback = True and action is CREATE/UPDATE
@@ -1101,8 +1096,8 @@ class Stack(collections.Mapping):
             # Ignore notification. Wait for others to complete
             pass
 
-    def _handle_success(self):
-        self._trigger_convergence()
+    def _handle_success(self, curr_template_id):
+        self._trigger_convergence(curr_template_id)
 
     def handle_timeout(self):
         values = {
@@ -1111,7 +1106,7 @@ class Stack(collections.Mapping):
         }
         db_api.stack_update(self.context, self.id, values)
 
-    def _get_nodes_matching_status(self, nodes, status):
+    def _get_tasks_matching_status(self, nodes, status):
         return filter(lambda (res_name, res_status): res_status == status, nodes)
 
     def process_resource_notif(self, incoming_req_id, resource_id, convg_status):
@@ -1137,7 +1132,7 @@ class Stack(collections.Mapping):
             if convg_status == CONVERGE_RESPONSE.OK:
                 if self._destructive_action_in_progress():
                     db_api.resource_delete(self.context, res.id)
-                self._handle_success()
+                self._handle_success(res.template_id)
             else:
                 # Failure scenario
                 values = {
