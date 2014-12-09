@@ -379,8 +379,8 @@ def resource_get_all_versions_by_name_and_stack(context, resource_name,
         context, resource_name, stack_id)
 
 
-def dep_task_graph_delete_all_edges(context, stack_id, res_names):
-    return IMPL.dep_task_graph_delete_all_edges(context, stack_id, res_names)
+def dep_task_graph_delete_all_edges(context, stack_id, template_ids):
+    return IMPL.dep_task_graph_delete_all_edges(context, stack_id, template_ids)
 
 
 def resource_delete(context, resource_id):

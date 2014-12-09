@@ -1050,14 +1050,13 @@ def update_graph_traversal(context, stack_id, status, resource_name=None,
     session.flush()
 
 
-def dep_task_graph_delete_all_edges(context, stack_id, res_names):
+def dep_task_graph_delete_all_edges(context, stack_id, template_ids):
     session = _session(context)
     with session.begin():
-        for res_name in res_names:
+        for template_id in template_ids:
             session.query(models.DependencyTaskGraph).\
                 filter_by(stack_id=stack_id).\
-                filter(or_(models.DependencyTaskGraph.resource_name == res_name,
-                        models.DependencyTaskGraph.needed_by == res_name)).\
+                filter_by(template_id=template_id).\
                 delete()
     session.flush()
 

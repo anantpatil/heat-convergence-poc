@@ -278,13 +278,6 @@ class Stack(collections.Mapping):
                     added_edges = set(new_required_by) - set(old_required_by)
                     self._store_edges(res.name, added_edges, self.t.id)
 
-    def _persist_update_version(self, new_res, old_res):
-        new_res.version = old_res.version + 1
-        if old_res.action == old_res.DELETE:
-            # if the resource was scheduled for deletion, create
-            new_res.action = new_res.CREATE
-        new_res.store()
-
     def _set_param_stackid(self):
         '''
         Update self.parameters with the current ARN which is then provided
@@ -596,7 +589,7 @@ class Stack(collections.Mapping):
         all_versions = resource.Resource.load_all_versions(self.context, res_name, self)
         if self._resource_exists_in_current_template(res_name):
             new_res = self.resources[res_name]
-            for old_res in all_versions:
+            for old_res in all_versions.values():
                 if old_res.matches_definitions(new_res.frozen_definition()):
                     # This is the one, update the template ID of this res
                     old_res.template_id = new_res.template_id
@@ -606,8 +599,8 @@ class Stack(collections.Mapping):
                 # update or create. Load children resources to satisfy any get_attr
                 # dependency for this resource
                 if all_versions:
-                    curr_res = all_versions[0]
-                    self._persist_update_version(new_res, curr_res)
+                    curr_res = all_versions[self.t.predecessor]
+                    new_res.store_update(new_res.UPDATE, new_res.INIT, 'Initiated update')
                     curr_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
                                       "Scheduled for update.")
                     self.rpc_client.converge_resource(self.context,
@@ -645,7 +638,7 @@ class Stack(collections.Mapping):
             return self._schedule_delete_job(res_name, template_id)
         # search for older versions and delete
         all_versions = resource.Resource.load_all_versions(self.context, res_name, self)
-        for res in all_versions:
+        for res in all_versions.values():
             # del if resource is not current
             if res.template_id != self.t.id:
                 res.store_update(res.DELETE, res.SCHEDULED, "Scheduled for deletion")
@@ -719,6 +712,18 @@ class Stack(collections.Mapping):
                 self._purge_edges()
         else:
             self.state_set(self.action, self.COMPLETE, reason)
+        self._purge_old_templates()
+
+    def _purge_old_templates(self):
+        all_previous_template_ids = self._get_all_previous_template_ids()
+        if not all_previous_template_ids:
+            return
+        # unlink current from previous to avoid Foriegn Key error
+        self.t.predecessor = None
+        self.t.store()
+        # Delete all previous templates
+        for id in all_previous_template_ids:
+            db_api.raw_template_delete(self.context, id)
 
     def _get_initial_template_id(self):
         """
@@ -1031,11 +1036,17 @@ class Stack(collections.Mapping):
         Called in the end to purge the edges from the graph. Edges of the resources 
         no longer in current stack.
         """
-        all_resources = set(db_api.get_all_resources_from_graph(self.context, self.id))
-        current_resources = set(self.resources.keys())
-        deleted_resources = all_resources - current_resources
+        all_previous_template_ids = self._get_all_previous_template_ids()
         db_api.dep_task_graph_delete_all_edges(self.context, self.id,
-                                               deleted_resources)
+                                               all_previous_template_ids)
+
+    def _get_all_previous_template_ids(self):
+        predecessors = []
+        template = self.t
+        while template.predecessor:
+            predecessors.append(template.predecessor)
+            template = db_api.raw_template_get(self.context, template.predecessor)
+        return predecessors
 
     def _get_remaining_timeout_secs(self):
         if self.action == Stack.CREATE:

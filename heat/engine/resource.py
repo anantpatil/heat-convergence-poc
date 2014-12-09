@@ -207,7 +207,9 @@ class Resource(object):
     def load_all_versions(cls, context, name, stack):
         all_versions = db_api.resource_get_all_versions_by_name_and_stack(
             context, name, stack.id)
-        return [Resource.load(db_res, stack) for db_res in all_versions]
+        #return [Resource.load(db_res, stack) for db_res in all_versions]
+        return dict((db_res.template_id, Resource.load(db_res, stack))
+                    for db_res in all_versions)
 
     def load_data(self, resource):
         '''Load the resource state from its DB representation.'''
