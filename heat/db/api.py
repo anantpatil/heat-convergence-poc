@@ -100,11 +100,11 @@ def resource_get_all_by_stack(context, stack_id, filters={}):
     return IMPL.resource_get_all_by_stack(context, stack_id, filters)
 
 
-def resource_get_by_name_and_stack(context, resource_name, stack_id,
-                                   version=None):
-    return IMPL.resource_get_by_name_and_stack(context,
-                                               resource_name, stack_id,
-                                               version=version)
+def resource_get_by_name_and_template(context, resource_name, stack_id=None,
+                                      template_id=None):
+    return IMPL.resource_get_by_name_and_template(context, resource_name,
+                                                  stack_id=stack_id,
+                                                  template_id=template_id)
 
 
 def resource_get_by_physical_resource_id(context, physical_resource_id):
@@ -394,6 +394,7 @@ def get_untraversed_edges(context, stack_id):
 def get_all_resources_from_graph(context, stack_id):
     return IMPL.get_all_resources_from_graph(context, stack_id)
 
+
 def get_stack_template_id(context, stack_id):
     return IMPL.get_stack_template_id(context, stack_id)
 
@@ -404,3 +405,7 @@ def get_res_children(context, template_id, parent):
 
 def  resource_get_by_name_and_template_id(context, res_name, template_id):
     return IMPL.resource_get_by_and_template_id(context, res_name, template_id)
+
+
+def raw_template_get_by_predecessor(context, predecessor):
+    return IMPL.raw_template_get_by_predecessor(context, predecessor)

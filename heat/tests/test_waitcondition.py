@@ -184,7 +184,7 @@ class WaitConditionTest(common.HeatTestCase):
         self.assertEqual((rsrc.CREATE, rsrc.COMPLETE),
                          rsrc.state)
 
-        r = db_api.resource_get_by_name_and_stack(None, 'WaitHandle',
+        r = db_api.resource_get_by_name_and_template(None, 'WaitHandle',
                                                   self.stack.id)
         self.assertEqual('WaitHandle', r.name)
         self.m.VerifyAll()
@@ -204,7 +204,7 @@ class WaitConditionTest(common.HeatTestCase):
         reason = rsrc.status_reason
         self.assertTrue(reason.startswith('WaitConditionFailure:'))
 
-        r = db_api.resource_get_by_name_and_stack(None, 'WaitHandle',
+        r = db_api.resource_get_by_name_and_template(None, 'WaitHandle',
                                                   self.stack.id)
         self.assertEqual('WaitHandle', r.name)
         self.m.VerifyAll()
@@ -225,7 +225,7 @@ class WaitConditionTest(common.HeatTestCase):
         self.assertEqual((rsrc.CREATE, rsrc.COMPLETE),
                          rsrc.state)
 
-        r = db_api.resource_get_by_name_and_stack(None, 'WaitHandle',
+        r = db_api.resource_get_by_name_and_template(None, 'WaitHandle',
                                                   self.stack.id)
         self.assertEqual('WaitHandle', r.name)
         self.m.VerifyAll()
@@ -245,7 +245,7 @@ class WaitConditionTest(common.HeatTestCase):
         reason = rsrc.status_reason
         self.assertTrue(reason.startswith('WaitConditionFailure:'))
 
-        r = db_api.resource_get_by_name_and_stack(None, 'WaitHandle',
+        r = db_api.resource_get_by_name_and_template(None, 'WaitHandle',
                                                   self.stack.id)
         self.assertEqual('WaitHandle', r.name)
         self.m.VerifyAll()
@@ -823,7 +823,7 @@ class HeatWaitConditionTest(common.HeatTestCase):
         self.assertEqual((rsrc.CREATE, rsrc.COMPLETE),
                          rsrc.state)
 
-        r = db_api.resource_get_by_name_and_stack(None, 'wait_handle',
+        r = db_api.resource_get_by_name_and_template(None, 'wait_handle',
                                                   self.stack.id)
         self.assertEqual('wait_handle', r.name)
         self.m.VerifyAll()
@@ -847,7 +847,7 @@ class HeatWaitConditionTest(common.HeatTestCase):
         reason = rsrc.status_reason
         self.assertTrue(reason.startswith('WaitConditionFailure:'))
 
-        r = db_api.resource_get_by_name_and_stack(None, 'wait_handle',
+        r = db_api.resource_get_by_name_and_template(None, 'wait_handle',
                                                   self.stack.id)
         self.assertEqual('wait_handle', r.name)
         self.m.VerifyAll()

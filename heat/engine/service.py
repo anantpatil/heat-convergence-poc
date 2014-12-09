@@ -558,46 +558,35 @@ class EngineService(service.Service):
                          called from another heat-engine (not a user option)
         """
         LOG.info(_LI('Creating stack %s'), stack_name)
-
-        def _stack_create(stack):
-
-            if not stack.stack_user_project_id:
-                stack.create_stack_user_project_id()
-
-            # Create/Adopt a stack, and create the periodic task if successful
-            if stack.adopt_stack_data:
-                if not cfg.CONF.enable_stack_adopt:
-                    raise exception.NotSupported(feature='Stack Adopt')
-
-                stack.adopt()
-            else:
-                stack.create_start()
-
-        stack = self._parse_template_and_validate_stack(cnxt,
-                                                        stack_name,
-                                                        template,
-                                                        params,
-                                                        files,
+        '''
+        Create is an update on empty template.
+        Create a stack with empty template and then issue and update.
+        '''
+        empty_template = {'heat_template_version': "2013-05-23"}
+        empty_params = {}
+        empty_files = {}
+        init_stack = self._parse_template_and_validate_stack(cnxt, stack_name,
+                                                        empty_template,
+                                                        empty_params,
+                                                        empty_files,
                                                         args,
                                                         owner_id)
-
-        stack.store()
-
-        self.thread_group_mgr.start_with_lock(cnxt, stack, self.engine_id,
-                                              _stack_create, stack)
-
-        return dict(stack.identifier())
+        init_stack.store()
+        init_stack.state_set(init_stack.CREATE, init_stack.COMPLETE,
+                             'Initial empty stack created')
+        return  self.update_stack(cnxt, init_stack.identifier(), template,
+                                  params, files, args)
 
     @staticmethod
     def _start_update_with_lock(engine_id, context, stack, updated_stack,
-                                event=None):
+                                event=None, action=None):
         lock = EngineService._spin_wait_acquire_lock_or_timeout(engine_id,
                                                                 context,
                                                                 stack)
         if not lock:
             stack.handle_timeout()
         try:
-            stack.update(updated_stack, event=event)
+            stack.update(updated_stack, action=action, event=event)
         finally:
             lock.release(stack.id)
 
@@ -631,6 +620,9 @@ class EngineService(service.Service):
             msg = _('Updating a stack when it is deleting')
             raise exception.NotSupported(feature=msg)
 
+        action = current_stack.UPDATE
+        if current_stack.status_reason == 'Initial empty stack created':
+            action = current_stack.CREATE
         # Now parse the template and any parameters for the updated
         # stack definition.
         env = environment.Environment(params)
@@ -667,7 +659,7 @@ class EngineService(service.Service):
                                          self._start_update_with_lock,
                                          self.engine_id, context,
                                          current_stack, updated_stack,
-                                         event=event)
+                                         action=action, event=event)
 
         th.link(self.thread_group_mgr.remove_event, current_stack.id, event)
         self.thread_group_mgr.add_event(current_stack.id, event)

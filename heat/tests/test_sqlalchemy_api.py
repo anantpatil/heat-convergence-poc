@@ -295,7 +295,7 @@ class SqlAlchemyTest(common.HeatTestCase):
         cs._store_or_update(cs.CREATE, cs.IN_PROGRESS, 'test_store')
 
         cs.my_secret = 'fake secret'
-        rs = db_api.resource_get_by_name_and_stack(self.ctx,
+        rs = db_api.resource_get_by_name_and_template(self.ctx,
                                                    'cs_encryption',
                                                    stack.id)
         encrypted_key = rs.data[0]['value']
@@ -1573,7 +1573,7 @@ class DBAPIResourceTest(common.HeatTestCase):
     def test_resource_get_by_name_and_stack(self):
         create_resource(self.ctx, self.stack)
 
-        ret_res = db_api.resource_get_by_name_and_stack(self.ctx,
+        ret_res = db_api.resource_get_by_name_and_template(self.ctx,
                                                         'test_resource_name',
                                                         self.stack.id)
 
@@ -1581,7 +1581,7 @@ class DBAPIResourceTest(common.HeatTestCase):
         self.assertEqual('test_resource_name', ret_res.name)
         self.assertEqual(self.stack.id, ret_res.stack_id)
 
-        self.assertIsNone(db_api.resource_get_by_name_and_stack(self.ctx,
+        self.assertIsNone(db_api.resource_get_by_name_and_template(self.ctx,
                                                                 'abc',
                                                                 self.stack.id))
 

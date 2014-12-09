@@ -109,7 +109,8 @@ class Resource(object):
     # Default name to use for calls to self.client()
     default_client_name = None
 
-    def __new__(cls, name, definition, stack, version=0, load_from_db=False):
+    def __new__(cls, name, definition, stack, template_id=None,
+                load_from_db=False):
         '''Create a new Resource of the appropriate class for its type.'''
 
         assert isinstance(definition, rsrc_defn.ResourceDefinition)
@@ -149,7 +150,7 @@ class Resource(object):
 
         return super(Resource, cls).__new__(ResourceClass)
 
-    def __init__(self, name, definition, stack, version=None, load_from_db=False):
+    def __init__(self, name, definition, stack, template_id=None, load_from_db=False):
         if '/' in name:
             raise ValueError(_('Resource name may not contain "/"'))
 
@@ -178,20 +179,21 @@ class Resource(object):
         self._stored_properties_data = None
         self.created_time = None
         self.updated_time = None
-        if version is None:
-            self.version = 0
-        else:
-            self.version = version
+        self.template_id = template_id or stack.t.id
+        self.update_to_template_id = None
         self._frozen_defn = None
         if load_from_db:
             # Try loading from DB
-            db_resource = db_api.resource_get_by_name_and_stack(
-                self.stack.context, self.name, self.stack.id, version=version)
+            db_resource = db_api.resource_get_by_name_and_template(
+                self.stack.context, self.name, stack_id=self.stack.id,
+                template_id=self.template_id)
             if db_resource:
                 self.load_data(db_resource)
 
     def __copy__(self):
-        return Resource(self.name, self.t, self.stack, version=self.version, load_from_db=True)
+        return Resource(self.name, self.t, self.stack,
+                        template_id=self.template_id,
+                        load_from_db=True)
 
     @classmethod
     def load(cls, db_resource, stack):
@@ -701,14 +703,16 @@ class Resource(object):
                                        self.context)
         return self._needs_update(after, before, after_props, before_props, None)
 
-    def _move_to_newer_version(self, new_res, back_up):
-        self.version = new_res.version
+    def matches_definitions(self, rsrc_defn):
+        return not self.needs_update(rsrc_defn)
+
+    def _move_to_newer_template(self, new_res, back_up):
+        self.template_id = new_res.template_id
         self.state_set(self.UPDATE, self.COMPLETE)
 
-        # overwrite the new_res with back=up
+        # overwrite the new_res with backup
         back_up.id = new_res.id
-        back_up.resource_id = new_res.resource_id
-        back_up.state_set(back_up.action, back_up.status, 'Update replaced')
+        back_up.state_set(back_up.action, back_up.status, 'Updated in-place')
 
     @scheduler.wrappertask
     def _replace(self, new_res):
@@ -720,17 +724,14 @@ class Resource(object):
 
     @scheduler.wrappertask
     def update(self):
-        #TODO: for concurrent update, version -1 might not have realized.
         LOG.debug("==== Update called for %s", self.name)
-        db_resource = db_api.resource_get_by_name_and_stack(self.context,
-                                                            self.name,
-                                                            self.stack.id,
-                                                            version=self.version + 1)
+        db_resource = db_api.resource_get_by_name_and_template_id(
+            self.context, self.name, self.update_to_template_id)
         new_res = Resource.load(db_resource, self.stack)
         try:
             back_up = self.__copy__()
             yield self.do_update(new_res._frozen_defn)
-            self._move_to_newer_version(new_res, back_up)
+            self._move_to_newer_template(new_res, back_up)
         except UpdateReplace:
             # Resource does not support in-place update, create a new one.
             self.state_set(self.action, self.FAILED, 'Update replace failed.'
@@ -922,20 +923,6 @@ class Resource(object):
                     action_args = []
                 yield self.action_handler_task(action, *action_args)
 
-    @classmethod
-    def delete_older_versions_from_db(cls, context, db_rsrc, stack_id, version):
-        '''
-        Only delete older versions
-        :param res:
-        :return:
-        '''
-        LOG.debug("==== Deleting older version for %s: ", db_rsrc.name)
-        db_resources = db_api.resource_get_all_versions_by_name_and_stack(
-            context, db_rsrc.name, stack_id)
-        for db_res in db_resources:
-            if db_res.version < version and db_res.nova_instance is None:
-                db_api.resource_delete(context, db_res.id)
-
     @scheduler.wrappertask
     def destroy(self):
         '''
@@ -986,7 +973,7 @@ class Resource(object):
                   'stack_name': self.stack.name,
                   'rsrc_defn': rsrc_defn_json,
                   'rsrc_defn_hash': self._frozen_defn.sha1_hash,
-                  'version': self.version}
+                  'template_id': self.template_id}
 
             new_rs = db_api.resource_create(self.context, rs)
             self.id = new_rs.id
@@ -1021,7 +1008,7 @@ class Resource(object):
                     'nova_instance': self.resource_id,
                     'rsrc_defn': rsrc_defn_json,
                     'rsrc_defn_hash': self._frozen_defn.sha1_hash,
-                    'version': self.version})
+                    'template_id': self.template_id})
             except Exception as ex:
                 LOG.error(_LE('DB error %s'), ex)
 

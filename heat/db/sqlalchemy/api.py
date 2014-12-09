@@ -133,18 +133,16 @@ def resource_get(context, resource_id):
     return result
 
 
-def resource_get_by_name_and_stack(context, resource_name, stack_id, version=None):
-    if version is not None:
+def resource_get_by_name_and_template(context, resource_name, stack_id=None, template_id=None):
+    if template_id is not None:
         result = model_query(context, models.Resource).\
             filter_by(name=resource_name).\
-            filter_by(stack_id=stack_id). \
-            filter_by(version=version).\
+            filter_by(template_id=template_id).\
             options(orm.joinedload("data")).first()
     else:
         from sqlalchemy import func
         result = model_query(context, models.Resource).\
             filter_by(name=resource_name).\
-            filter_by(stack_id=stack_id).\
             filter(models.Resource.template_id.in_(
                 model_query(context, func.max(models.Resource.template_id)).\
                 filter_by(name=resource_name, stack_id=stack_id).subquery())).\
@@ -157,7 +155,6 @@ def resource_get_all_versions_by_name_and_stack(context, resource_name, stack_id
     result = model_query(context, models.Resource). \
         filter_by(name=resource_name). \
         filter_by(stack_id=stack_id). \
-        order_by(models.Resource.template_id.desc()). \
         options(orm.joinedload("data")).all()
     return result
 
@@ -1033,10 +1030,18 @@ def get_ready_nodes(context, stack_id, template_id, reverse):
         return query.distinct().all()
 
 
-def update_graph_traversal(context, stack_id, status, resource_name=None):
-    filters = {'stack_id': stack_id}
-    if resource_name:
-        filters['resource_name'] = resource_name
+def update_graph_traversal(context, stack_id, status, resource_name=None,
+                           template_id=None):
+    # Filter either by template_id and resource name or
+    # by stack_id only
+    filters = {}
+    if template_id:
+        filters = {'template_id': template_id}
+        if resource_name:
+            filters['resource_name'] = resource_name
+    else:
+        filters = {'stack_id': stack_id}
+
     session = _session(context)
     with session.begin():
         session.query(models.DependencyTaskGraph).\
@@ -1081,4 +1086,10 @@ def resource_get_by_and_template_id(context, res_name, template_id):
         filter_by(name=res_name). \
         filter_by(template_id=template_id).\
         options(orm.joinedload("data")).first()
+    return result
+
+
+def raw_template_get_by_predecessor(context, predecessor):
+    result = model_query(context, models.RawTemplate). \
+        filter_by(predecessor=predecessor).first()
     return result

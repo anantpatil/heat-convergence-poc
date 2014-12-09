@@ -34,7 +34,7 @@ class ConvergenceWorker:
                 context, request_id, stack_id, resource_id,
                 CONVERGE_RESPONSE.PANIC)
         try:
-            stack.resource_action_runner(resource_id, timeout)
+            stack.resource_action_runner(resource_id, stack.t.id, timeout)
         except Exception as e:
             LOG.exception(e)
             stack.rpc_client.notify_resource_observed(context, request_id,
