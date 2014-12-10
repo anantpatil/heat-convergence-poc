@@ -457,8 +457,10 @@ def stack_update(context, stack_id, values):
                                      'id': stack_id,
                                      'msg': 'that does not exist'})
 
+    session = _session(context)
     stack.update(values)
-    stack.save(_session(context))
+    stack.save(session)
+    session.flush()
 
 
 def stack_delete(context, stack_id):

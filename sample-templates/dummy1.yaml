@@ -7,7 +7,7 @@ parameters:
         default: 16
 
 resources:
-    dumb:
+    d:
         type: OS::Heat::Dummy
         properties:
             name_len: {get_param: len}

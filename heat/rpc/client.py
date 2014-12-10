@@ -525,17 +525,20 @@ class EngineClient(object):
         return self.call(cnxt, self.make_msg('stack_list_snapshots',
                                              stack_identity=stack_identity))
 
-    def converge_resource(self, cnxt, request_id, stack_id, resource_id, timeout):
+    def converge_resource(self, cnxt, request_id, stack_id, template_id,
+                          resource_id, timeout):
         return self.cast(cnxt, self.make_msg('converge_resource',
                                              request_id=request_id,
                                              stack_id=stack_id,
+                                             template_id=template_id,
                                              resource_id=resource_id,
                                              timeout=timeout))
 
-    def notify_resource_observed(self, cnxt, request_id, stack_id, resource_id,
-                                 convg_status):
+    def notify_resource_observed(self, cnxt, request_id, stack_id, template_id,
+                                 resource_id, convg_status):
         return self.cast(cnxt, self.make_msg('notify_resource_observed',
                                              request_id=request_id,
                                              stack_id=stack_id,
+                                             template_id=template_id,
                                              resource_id=resource_id,
                                              convg_status=convg_status))

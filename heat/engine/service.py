@@ -510,34 +510,35 @@ class EngineService(service.Service):
 
     @staticmethod
     def _handle_resource_notif(engine_id, context, request_id, stack_id,
-                               resource_id, convg_status):
+                               template_id, resource_id, convg_status):
         stack = parser.Stack.load(context, stack_id=stack_id)
         lock = EngineService._spin_wait_acquire_lock_or_timeout(engine_id, context,
                                                        stack)
         if not lock:
             stack.handle_timeout()
         try:
-            stack.process_resource_notif(request_id, resource_id, convg_status)
+            stack.process_resource_notif(request_id, template_id, resource_id, convg_status)
         finally:
             lock.release(stack_id)
 
 
     @request_context
-    def converge_resource(self, context, request_id, stack_id, resource_id,
+    def converge_resource(self, context, request_id, stack_id, template_id, resource_id,
                           timeout):
         from convg_worker import ConvergenceWorker
         self.thread_group_mgr.start(stack_id, ConvergenceWorker.do_converge,
-                                    context, request_id, stack_id,
+                                    context, request_id, stack_id, template_id,
                                     resource_id, timeout)
 
     @request_context
     def notify_resource_observed(self, context, request_id, stack_id,
-                                 resource_id, convg_status):
+                                 template_id, resource_id, convg_status):
         # Just launch in a thread.
         # simply start a new thread with handle_resouce_notif as func
         self.thread_group_mgr.start(stack_id, self._handle_resource_notif,
                                     self.engine_id, context, request_id,
-                                    stack_id, resource_id, convg_status)
+                                    stack_id, template_id, resource_id,
+                                    convg_status)
 
     @request_context
     def create_stack(self, cnxt, stack_name, template, params, files, args,
