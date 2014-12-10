@@ -103,7 +103,7 @@ class Dummy(resource.Resource):
         pass
 
     def _get_random_sleep_secs(self):
-        return random.randint(1, 5)
+        return random.randint(0, 1)
     
     def handle_create(self):
         length = self.properties.get(self.LENGTH)

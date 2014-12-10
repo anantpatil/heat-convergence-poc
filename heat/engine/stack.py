@@ -285,7 +285,7 @@ class Stack(collections.Mapping):
                         self._store_edges(res.name, new_edges_added, self.t.id)
                     else:
                         # no overlapping edges, all new
-                        self._update_edges(res.name, new_required_by, previous_template_id, self.t.id)
+                        self._store_edges(res.name, new_required_by, self.t.id)
 
     def _set_param_stackid(self):
         '''
@@ -600,7 +600,8 @@ class Stack(collections.Mapping):
         """
         scheduled_a_job = False
         for res_name in res_names:
-            all_versions = resource.Resource.load_all_versions(self.context, res_name, self)
+            all_versions = resource.Resource.load_all_versions(self.context,
+                                                               res_name, self)
             if self._resource_exists_in_current_template(res_name):
                 new_res = self.resources[res_name]
                 for old_res in all_versions.values():
@@ -616,12 +617,13 @@ class Stack(collections.Mapping):
                     # dependency for this resource
                     if all_versions:
                         curr_res = all_versions[self.t.predecessor]
-                        new_res.store()
-                        curr_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
+                        new_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
                                           "Scheduled for update.")
+                        curr_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
+                                          "Updating resource")
                         self.rpc_client.converge_resource(self.context,
                                                           self.current_req_id(),
-                                                          self.id, curr_template_id, curr_res.id,
+                                                          self.id, curr_template_id, new_res.id,
                                                           self._get_remaining_timeout_secs())
                         self._mark_task_as_scheduled(res_name, template_id=self.t.id)
                         scheduled_a_job = True
@@ -646,7 +648,7 @@ class Stack(collections.Mapping):
                                                               res_name,
                                                               template_id=template_id)
             if db_res:
-                res = resource.Resource.load(db_res, self)
+                res = resource.Resource.load(self, db_res.id, db_resource=db_res)
                 res.store_update(res.DELETE, res.SCHEDULED, "Scheduled for deletion")
                 self.rpc_client.converge_resource( self.context,
                                                    self.current_req_id(),
@@ -667,7 +669,8 @@ class Stack(collections.Mapping):
                 scheduled_a_job = self._schedule_delete_job(name_list, template_id)
             else:
                 # search for older versions and delete
-                all_versions = resource.Resource.load_all_versions(self.context, res_name, self)
+                all_versions = resource.Resource.load_all_versions(self.context,
+                                                                   res_name, self)
                 if len(all_versions) == 1:
                     # no older versions to be deleted
                     self._mark_task_as_done(res_name, template_id)
@@ -699,14 +702,16 @@ class Stack(collections.Mapping):
         in_progress_filters = {'status': resource.Resource.IN_PROGRESS}
         scheduled_filters = {'status': resource.Resource.SCHEDULED}
         try:
-            in_progress_resources = db_api.resource_get_all_by_stack(
+            result = db_api.resource_get_all_by_stack(
                 self.context, self.id, filters=in_progress_filters)
+            in_progress_resources = result.values()
         except exception.NotFound:
             in_progress_resources = []
 
         try:
-            scheduled_resources = db_api.resource_get_all_by_stack(
+            result = db_api.resource_get_all_by_stack(
                 self.context, self.id, filters=scheduled_filters)
+            scheduled_resources = result.values()
         except exception.NotFound:
             scheduled_resources = []
 
@@ -805,7 +810,7 @@ class Stack(collections.Mapping):
         if not running_or_unscheduled_tasks:
             if (self.action, self.status) in ((self.CREATE, self.IN_PROGRESS),
                                               (self.DELETE, self.IN_PROGRESS)):
-                self._handle_stack_action_complete()
+                return [], [], curr_template_id
             elif (self.action, self.status) in ((self.ROLLBACK, self.IN_PROGRESS),
                                                 (self.UPDATE, self.IN_PROGRESS)):
                 self.state_set(self.action, self.GC_IN_PROGRESS, 'Resource clean up running')
@@ -821,7 +826,8 @@ class Stack(collections.Mapping):
         running_tasks = set(running_or_unscheduled_tasks) - set(unscheduled_tasks)
         return unscheduled_tasks, running_tasks, curr_template_id
 
-    def _trigger_convergence(self, curr_template_id=None, concurrent_update_on=False):
+    def _trigger_convergence(self, curr_template_id=None,
+                             concurrent_update_on=False):
         if self._get_remaining_timeout_secs() <= 0:
             self.handle_timeout()
             return
@@ -860,11 +866,26 @@ class Stack(collections.Mapping):
                                 '_%s_kwargs' % action_l, lambda x: {})
         yield handle(**handle_kwargs(r))
 
-    def resource_action_runner(self, resource_id, curr_template_id, timeout):
-        db_rsrc = db_api.resource_get(self.context, resource_id)
-        rsrc = resource.Resource.load(db_rsrc, self)
+    def run_resource_task(self, resource_id, timeout):
+        new_res = resource.Resource.load(self, resource_id)
+        res_to_convg = new_res
+        if new_res.action in (new_res.UPDATE, new_res.ROLLBACK):
+            old_db_res = db_api.resource_get_by_name_and_template_id(
+                self.context, new_res.name, self.t.predecessor)
+            old_res = resource.Resource.load(self, old_db_res.id,
+                                          db_resource=old_db_res)
+            old_res.update_to(new_res)
+            res_to_convg = old_res
+        action_task = scheduler.TaskRunner(
+            self.resource_action,
+            res_to_convg)
+        action_task(timeout=timeout)
+
+    def run_resource_action(self, resource_id, curr_template_id, timeout):
+        rsrc = resource.Resource.load(self, resource_id)
         rsrc.update_to_template_id = curr_template_id
-        LOG.debug("=====Resource name %s, from template %s", rsrc.name, rsrc.template_id)
+        LOG.debug("=====Resource name %s, from template %s", rsrc.name,
+                           rsrc.template_id)
         action_task = scheduler.TaskRunner(
                             self.resource_action,
                             rsrc)
@@ -877,7 +898,8 @@ class Stack(collections.Mapping):
         for db_resource in db_resources:
             if db_resource.nova_instance:
                 LOG.debug("==== Destroy resource %s ", rsrc_name)
-                res = resource.Resource.load(db_resource, self)
+                res = resource.Resource.load(self, db_resource.id,
+                                             db_resource=db_resource)
                 yield res.destroy()
             else:
                 db_api.resource_delete(self.context, db_resource.id)
@@ -1085,7 +1107,7 @@ class Stack(collections.Mapping):
         successor_tmpl.predecessor = None
         successor_tmpl.store(curr_stack.context)
         last_complete_template.store(curr_stack.context)
-        curr_stack._delete_all_edges(last_complete_template)
+        curr_stack._delete_all_edges(last_complete_template.id)
         new_stack = Stack(curr_stack.context, curr_stack.name, last_complete_template)
         Stack.update(curr_stack, new_stack, action=curr_stack.ROLLBACK)
 
@@ -1168,7 +1190,8 @@ class Stack(collections.Mapping):
     def _get_tasks_matching_status(self, nodes, status):
         return filter(lambda (res_name, res_status): res_status == status, nodes)
 
-    def process_resource_notif(self, incoming_req_id, template_id, resource_id, convg_status):
+    def process_resource_notif(self, incoming_req_id, template_id,
+                               resource_id, convg_status):
         if convg_status == CONVERGE_RESPONSE.PANIC:
             # a new update was issued, worker panicked
             db_api.resource_delete(self.context, resource_id)

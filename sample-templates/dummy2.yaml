@@ -7,10 +7,10 @@ parameters:
         default: 16
 
 resources:
-    dumb:
+    d:
         type: OS::Heat::Dummy
         properties:
             name_len: 32
-            update_in_place_prop: "ntty2"
+            update_in_place_prop: "ntty"
             fail_prop: "yes"
 

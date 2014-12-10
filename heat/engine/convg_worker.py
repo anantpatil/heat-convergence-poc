@@ -26,7 +26,8 @@ class ConvergenceWorker:
     """
 
     @staticmethod
-    def do_converge(context, request_id, stack_id, template_id, resource_id, timeout):
+    def do_converge(context, request_id, stack_id, template_id, resource_id,
+                    timeout):
         stack = Stack.load(context, stack_id=stack_id)
         if request_id != stack.current_req_id():
             # panic: a new stack operation was issued
@@ -35,7 +36,7 @@ class ConvergenceWorker:
                 resource_id, CONVERGE_RESPONSE.PANIC)
 
         try:
-            stack.resource_action_runner(resource_id, stack.t.id, timeout)
+            stack.run_resource_task(resource_id, timeout)
         except Exception as e:
             LOG.exception(e)
             stack.rpc_client.notify_resource_observed(context, request_id,

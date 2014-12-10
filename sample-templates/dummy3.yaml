@@ -11,4 +11,4 @@ resources:
         type: OS::Heat::Dummy
         properties:
             name_len: {get_param: len}
-            update_in_place_prop: "ntty"
+            update_in_place_prop: "ntty2"

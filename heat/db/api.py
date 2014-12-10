@@ -327,23 +327,23 @@ def db_version(engine):
     return IMPL.db_version(engine)
 
 
-def graph_update(contex, values):
-    return IMPL.graph_update(contex, values)
+def graph_update(context, values):
+    return IMPL.graph_update(context, values)
 
 
-def graph_update_edge(contex, values, new_template_id):
-    return IMPL.graph_update_edge(contex, values, new_template_id)
+def graph_update_edge(context, values, new_template_id):
+    return IMPL.graph_update_edge(context, values, new_template_id)
 
 
-def graph_insert_edge(contex, values):
-    return IMPL.graph_insert_egde(contex, values)
+def graph_insert_edge(context, values):
+    return IMPL.graph_insert_egde(context, values)
 
-def graph_delete_edge(contex, values):
-    return IMPL.graph_delete_egde(contex, values)
+def graph_delete_edge(context, values):
+    return IMPL.graph_delete_egde(context, values)
 
 
-def graph_get_all_by_stack(contex, stack_id):
-    return IMPL.graph_get_all_by_stack(contex, stack_id)
+def graph_get_all_by_stack(context, stack_id):
+    return IMPL.graph_get_all_by_stack(context, stack_id)
 
 
 def graph_delete(context, stack_id):

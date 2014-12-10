@@ -180,7 +180,7 @@ class Resource(object):
         self.created_time = None
         self.updated_time = None
         self.template_id = template_id or stack.t.id
-        self.update_to_template_id = None
+        #self.update_to_template_id = None
         self._frozen_defn = None
         if load_from_db:
             # Try loading from DB
@@ -196,7 +196,9 @@ class Resource(object):
                         load_from_db=True)
 
     @classmethod
-    def load(cls, db_resource, stack):
+    def load(cls, stack, resource_id, db_resource=None):
+        if db_resource is None:
+            db_resource = db_api.resource_get(stack.context, resource_id)
         r_defn = rsrc_defn.ResourceDefinition.from_json(
             db_resource.rsrc_defn, db_resource.rsrc_defn_hash)
         res = cls(db_resource.name, r_defn, stack)
@@ -208,7 +210,8 @@ class Resource(object):
         all_versions = db_api.resource_get_all_versions_by_name_and_stack(
             context, name, stack.id)
         #return [Resource.load(db_res, stack) for db_res in all_versions]
-        return dict((db_res.template_id, Resource.load(db_res, stack))
+        return dict((db_res.template_id, Resource.load(stack, db_res.id,
+                                                       db_resource=db_res))
                     for db_res in all_versions)
 
     def load_data(self, resource):
@@ -335,6 +338,9 @@ class Resource(object):
             self._frozen_defn = self.t.freeze(**args)
 
         return self._frozen_defn
+
+    def update_to(self, new_res):
+        self._update_to = new_res
 
     def update_template_diff(self, after, before):
         '''
@@ -706,7 +712,10 @@ class Resource(object):
         return self._needs_update(after, before, after_props, before_props, None)
 
     def matches_definitions(self, rsrc_defn):
-        return not self.needs_update(rsrc_defn)
+        try:
+            return  not self.needs_update(rsrc_defn)
+        except UpdateReplace:
+            return False
 
     def _move_to_newer_template(self, new_res, back_up):
         self.template_id = new_res.template_id
@@ -727,9 +736,10 @@ class Resource(object):
     @scheduler.wrappertask
     def update(self):
         LOG.debug("==== Update called for %s", self.name)
-        db_resource = db_api.resource_get_by_name_and_template_id(
-            self.context, self.name, self.update_to_template_id)
-        new_res = Resource.load(db_resource, self.stack)
+        #db_resource = db_api.resource_get_by_name_and_template_id(
+            #self.context, self.name, self.update_to_template_id)
+        #new_res = Resource.load(db_resource, self.stack)
+        new_res = self._update_to
         try:
             back_up = self.__copy__()
             yield self.do_update(new_res._frozen_defn)
