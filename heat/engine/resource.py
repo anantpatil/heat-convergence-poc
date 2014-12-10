@@ -180,7 +180,7 @@ class Resource(object):
         self.created_time = None
         self.updated_time = None
         self.template_id = template_id or stack.t.id
-        #self.update_to_template_id = None
+        self.update_to_template_id = None
         self._frozen_defn = None
         if load_from_db:
             # Try loading from DB
@@ -199,6 +199,7 @@ class Resource(object):
     def load(cls, stack, resource_id, db_resource=None):
         if db_resource is None:
             db_resource = db_api.resource_get(stack.context, resource_id)
+
         r_defn = rsrc_defn.ResourceDefinition.from_json(
             db_resource.rsrc_defn, db_resource.rsrc_defn_hash)
         res = cls(db_resource.name, r_defn, stack)
@@ -338,9 +339,6 @@ class Resource(object):
             self._frozen_defn = self.t.freeze(**args)
 
         return self._frozen_defn
-
-    def update_to(self, new_res):
-        self._update_to = new_res
 
     def update_template_diff(self, after, before):
         '''
@@ -736,17 +734,16 @@ class Resource(object):
     @scheduler.wrappertask
     def update(self):
         LOG.debug("==== Update called for %s", self.name)
-        #db_resource = db_api.resource_get_by_name_and_template_id(
-            #self.context, self.name, self.update_to_template_id)
-        #new_res = Resource.load(db_resource, self.stack)
-        new_res = self._update_to
+        db_resource = db_api.resource_get_by_name_and_template_id(
+            self.context, self.name, self.update_to_template_id)
+        new_res = Resource.load(self.stack, db_resource.id, db_resource=db_resource)
         try:
             back_up = self.__copy__()
             yield self.do_update(new_res._frozen_defn)
             self._move_to_newer_template(new_res, back_up)
         except UpdateReplace:
             # Resource does not support in-place update, create a new one.
-            self.state_set(self.action, self.FAILED, 'Update replace failed.'
+            self.state_set(new_res.action, new_res.FAILED, 'Update replace failed.'
                                                      ' Creating new version.')
             yield self._replace(new_res)
 

@@ -617,13 +617,14 @@ class Stack(collections.Mapping):
                     # dependency for this resource
                     if all_versions:
                         curr_res = all_versions[self.t.predecessor]
+                        new_res.store()
                         new_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
                                           "Scheduled for update.")
                         curr_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
                                           "Updating resource")
                         self.rpc_client.converge_resource(self.context,
                                                           self.current_req_id(),
-                                                          self.id, curr_template_id, new_res.id,
+                                                          self.id, curr_template_id, curr_res.id,
                                                           self._get_remaining_timeout_secs())
                         self._mark_task_as_scheduled(res_name, template_id=self.t.id)
                         scheduled_a_job = True
@@ -865,21 +866,6 @@ class Stack(collections.Mapping):
         handle_kwargs = getattr(self,
                                 '_%s_kwargs' % action_l, lambda x: {})
         yield handle(**handle_kwargs(r))
-
-    def run_resource_task(self, resource_id, timeout):
-        new_res = resource.Resource.load(self, resource_id)
-        res_to_convg = new_res
-        if new_res.action in (new_res.UPDATE, new_res.ROLLBACK):
-            old_db_res = db_api.resource_get_by_name_and_template_id(
-                self.context, new_res.name, self.t.predecessor)
-            old_res = resource.Resource.load(self, old_db_res.id,
-                                          db_resource=old_db_res)
-            old_res.update_to(new_res)
-            res_to_convg = old_res
-        action_task = scheduler.TaskRunner(
-            self.resource_action,
-            res_to_convg)
-        action_task(timeout=timeout)
 
     def run_resource_action(self, resource_id, curr_template_id, timeout):
         rsrc = resource.Resource.load(self, resource_id)

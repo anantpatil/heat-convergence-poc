@@ -11,6 +11,6 @@ resources:
         type: OS::Heat::Dummy
         properties:
             name_len: 32
-            update_in_place_prop: "ntty"
+            update_in_place_prop: "ntty2"
             fail_prop: "yes"
 
