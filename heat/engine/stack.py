@@ -171,9 +171,9 @@ class Stack(collections.Mapping):
             raise exception.Error(msg)
 
     @property
-    def resources(self):
+    def resources(self, load_from_db=True):
         if self._resources is None:
-            self._resources = dict((name, resource.Resource(name, data, self, load_from_db=True))
+            self._resources = dict((name, resource.Resource(name, data, self, load_from_db=load_from_db))
                                    for (name, data) in
                                    self.t.resource_definitions(self).items())
             # There is no need to continue storing the db resources
@@ -238,8 +238,11 @@ class Stack(collections.Mapping):
     def _update_edges(self, resource_name, required_by, template_id):
         value = {'resource_name': resource_name, 'stack_id': self.id,
                  'template_id':template_id}
-        for req in required_by:
-            value['needed_by'] = req
+        if required_by:
+            for req in required_by:
+                value['needed_by'] = req
+                db_api.graph_update_edge(self.context, value)
+        else:
             db_api.graph_update_edge(self.context, value)
 
     def update_dependencies(self):
@@ -253,12 +256,12 @@ class Stack(collections.Mapping):
 
         with db_api.transaction(self.context):
             for res in new_deps:
-                new_required_by = [req.name for req in
-                                   new_deps.required_by(res)]
-                old_required_by = db_api.get_resource_required_by(self.context,
+                new_required_by = set([req.name for req in
+                                   new_deps.required_by(res)])
+                old_required_by = set(db_api.get_resource_required_by(self.context,
                                                                   self.id,
                                                                   res.name,
-                                                                  previous_template_id)
+                                                                  previous_template_id))
                 resource_exists = db_api.resource_exists_in_graph(self.context,
                                                                   self.id,
                                                                   res.name,
@@ -268,15 +271,20 @@ class Stack(collections.Mapping):
                 # this resource
                 if not resource_exists:
                     self._store_edges(res.name, new_required_by, self.t.id)
-                
-                # update the template id for unchanged edges:
-                elif set(new_required_by) & set(old_required_by):
-                    unchanged_edges = set(old_required_by) & set(new_required_by)
-                    self._update_edges(res.name, unchanged_edges, self.t.id)
-
-                elif set(new_required_by) != set(old_required_by):
-                    added_edges = set(new_required_by) - set(old_required_by)
-                    self._store_edges(res.name, added_edges, self.t.id)
+                elif new_required_by == old_required_by:
+                    # Just update the template ID
+                    self._update_edges(res.name, new_required_by, self.t.id)
+                else:
+                    # edges got updated
+                    if new_required_by & old_required_by:
+                        # few edges are overlapping, few are new
+                        unchanged_edges = old_required_by & new_required_by
+                        new_edges_added = new_required_by - old_required_by
+                        self._update_edges(res.name, unchanged_edges, self.t.id)
+                        self._store_edges(res.name, new_edges_added, self.t.id)
+                    else:
+                        # no overlapping edges, all new
+                        self._store_edges(res.name, new_required_by, self.t.id)
 
     def _set_param_stackid(self):
         '''
@@ -332,14 +340,15 @@ class Stack(collections.Mapping):
         all_children = []
         for parent in parents:
             all_children += db_api.get_res_children(self.context, self.t.id, parent)
-        resources_to_be_loaded = all_children + parents
         resource_definitions = self.t.resource_definitions(self)
-        for name in resources_to_be_loaded:
-            LOG.debug("=== has key: %s" % resource_definitions.has_key(name))
+        for name in all_children:
             data = resource_definitions[name]
-            LOG.debug("data: %s" % str(data))
             self._resources[name] = resource.Resource(name, data, self,
                                                       load_from_db=True)
+        # load the parents, they should not be in DB
+        for name in parents:
+            data = resource_definitions[name]
+            self._resources[name] = resource.Resource(name, data, self)
         # There is no need to continue storing the db resources
         # after resource creation
         self._db_resources = None
@@ -600,7 +609,7 @@ class Stack(collections.Mapping):
                 # dependency for this resource
                 if all_versions:
                     curr_res = all_versions[self.t.predecessor]
-                    new_res.store_update(new_res.UPDATE, new_res.INIT, 'Initiated update')
+                    new_res.store()
                     curr_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
                                       "Scheduled for update.")
                     self.rpc_client.converge_resource(self.context,

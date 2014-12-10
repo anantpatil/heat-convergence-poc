@@ -952,9 +952,10 @@ def graph_update_edge(context, value):
     session = _session(context)
     session.query(models.DependencyTaskGraph).\
             filter_by(resource_name=value['resource_name'],
-                      needed_by=value['needed_by'],
+                      needed_by=value.get('needed_by',''),
                       stack_id=value['stack_id']).\
                       update({"template_id": value['template_id']})
+    #session.flush()
 
 def graph_get_all_by_stack(context, stack_id):
     """ Retrieves all the edges of the graph for the given stack. """
