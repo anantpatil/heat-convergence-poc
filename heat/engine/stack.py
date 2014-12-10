@@ -235,15 +235,16 @@ class Stack(collections.Mapping):
         else:
             db_api.graph_insert_edge(self.context, value)
 
-    def _update_edges(self, resource_name, required_by, template_id):
+    def _update_edges(self, resource_name, required_by, prev_template_id,
+                      new_template_id):
         value = {'resource_name': resource_name, 'stack_id': self.id,
-                 'template_id':template_id}
+                 'template_id':prev_template_id}
         if required_by:
             for req in required_by:
                 value['needed_by'] = req
-                db_api.graph_update_edge(self.context, value)
+                db_api.graph_update_edge(self.context, value, new_template_id)
         else:
-            db_api.graph_update_edge(self.context, value)
+            db_api.graph_update_edge(self.context, value, new_template_id)
 
     def update_dependencies(self):
         new_deps = self.get_deps_from_current_template()
@@ -273,18 +274,18 @@ class Stack(collections.Mapping):
                     self._store_edges(res.name, new_required_by, self.t.id)
                 elif new_required_by == old_required_by:
                     # Just update the template ID
-                    self._update_edges(res.name, new_required_by, self.t.id)
+                    self._update_edges(res.name, new_required_by, previous_template_id, self.t.id)
                 else:
                     # edges got updated
                     if new_required_by & old_required_by:
                         # few edges are overlapping, few are new
                         unchanged_edges = old_required_by & new_required_by
                         new_edges_added = new_required_by - old_required_by
-                        self._update_edges(res.name, unchanged_edges, self.t.id)
+                        self._update_edges(res.name, unchanged_edges, previous_template_id, self.t.id)
                         self._store_edges(res.name, new_edges_added, self.t.id)
                     else:
                         # no overlapping edges, all new
-                        self._store_edges(res.name, new_required_by, self.t.id)
+                        self._update_edges(res.name, new_required_by, previous_template_id, self.t.id)
 
     def _set_param_stackid(self):
         '''
@@ -662,7 +663,8 @@ class Stack(collections.Mapping):
         for res_name in res_names:
             if template_id != self.t.id:
                 # Resource clean-up for older template
-                scheduled_a_job = self._schedule_delete_job(list(res_name), template_id)
+                name_list = [res_name]
+                scheduled_a_job = self._schedule_delete_job(name_list, template_id)
             else:
                 # search for older versions and delete
                 all_versions = resource.Resource.load_all_versions(self.context, res_name, self)
@@ -884,8 +886,9 @@ class Stack(collections.Mapping):
         if self._resources:
             self._resources.clear()
 
+    @staticmethod
     @profiler.trace('Stack.update', hide_args=False)
-    def update(self, new_stack=None, event=None, action=UPDATE):
+    def update(curr_stack, new_stack=None, event=None, action=UPDATE):
         '''
         Compare the current stack with new_stack,
         and where necessary create/update/delete the resources until
@@ -898,15 +901,15 @@ class Stack(collections.Mapping):
         60 minutes, set in the constructor
         '''
         concurrent_update_on = False
-        if self.status in (self.IN_PROGRESS, self.GC_IN_PROGRESS):
+        if curr_stack.status in (curr_stack.IN_PROGRESS, curr_stack.GC_IN_PROGRESS):
             concurrent_update_on = True
-        self.state_set(action, self.IN_PROGRESS,
+        curr_stack.state_set(action, curr_stack.IN_PROGRESS,
                        'Stack %s started' % action)
-        new_stack.id = self.id
+        new_stack.id = curr_stack.id
         new_stack.action = action
-        new_stack.status = self.IN_PROGRESS
-        new_stack.status_reason = self.status_reason
-        new_stack.created_time = self.created_time
+        new_stack.status = curr_stack.IN_PROGRESS
+        new_stack.status_reason = curr_stack.status_reason
+        new_stack.created_time = curr_stack.created_time
         new_stack.updated_time = timeutils.utcnow()
         # update request ID
         new_stack._generate_new_req_id()
@@ -915,9 +918,10 @@ class Stack(collections.Mapping):
         new_stack._reset_resources()
         
         # Mark all nodes as UN_SCHEDULED
-        db_api.update_graph_traversal(self.context, new_stack.id,
+        db_api.update_graph_traversal(curr_stack.context, new_stack.id,
                                          status=TASK_STATUS.UN_SCHEDULED)
 
+        curr_stack = None
         new_stack._trigger_convergence(concurrent_update_on=concurrent_update_on)
 
     @profiler.trace('Stack.delete', hide_args=False)
@@ -1081,8 +1085,12 @@ class Stack(collections.Mapping):
         successor_tmpl.predecessor = None
         successor_tmpl.store(curr_stack.context)
         last_complete_template.store(curr_stack.context)
+        curr_stack._delete_all_edges(last_complete_template)
         new_stack = Stack(curr_stack.context, curr_stack.name, last_complete_template)
-        curr_stack.update(new_stack, action=curr_stack.ROLLBACK)
+        Stack.update(curr_stack, new_stack, action=curr_stack.ROLLBACK)
+
+    def _delete_all_edges(self, template_id):
+        db_api.graph_delete_edges_for_template(self.context, template_id)
 
     def _purge_edges(self):
         """

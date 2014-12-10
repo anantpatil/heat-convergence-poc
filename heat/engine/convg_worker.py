@@ -33,6 +33,7 @@ class ConvergenceWorker:
             stack.rpc_client.notify_resource_observed(
                 context, request_id, stack_id, template_id,
                 resource_id, CONVERGE_RESPONSE.PANIC)
+
         try:
             stack.resource_action_runner(resource_id, stack.t.id, timeout)
         except Exception as e:
@@ -41,8 +42,7 @@ class ConvergenceWorker:
                                                      stack.id, template_id,
                                                      resource_id,
                                                      CONVERGE_RESPONSE.FAILED)
-
-        stack.rpc_client.notify_resource_observed(
-            context, request_id, stack.id,
-            template_id, resource_id, CONVERGE_RESPONSE.OK)
-
+        else:
+            stack.rpc_client.notify_resource_observed(
+                context, request_id, stack.id,
+                template_id, resource_id, CONVERGE_RESPONSE.OK)

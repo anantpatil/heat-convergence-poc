@@ -331,8 +331,8 @@ def graph_update(contex, values):
     return IMPL.graph_update(contex, values)
 
 
-def graph_update_edge(contex, values):
-    return IMPL.graph_update_edge(contex, values)
+def graph_update_edge(contex, values, new_template_id):
+    return IMPL.graph_update_edge(contex, values, new_template_id)
 
 
 def graph_insert_edge(contex, values):
@@ -348,6 +348,10 @@ def graph_get_all_by_stack(contex, stack_id):
 
 def graph_delete(context, stack_id):
     return IMPL.graph_delete(context, stack_id)
+
+
+def graph_delete_edges_for_template(context, template_id):
+    return IMPL.graph_delete_edges_for_template(context, template_id)
 
 
 def transaction(context):

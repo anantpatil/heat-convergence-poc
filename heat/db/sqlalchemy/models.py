@@ -373,8 +373,8 @@ class DependencyTaskGraph(BASE, HeatBase):
                                   primary_key=True, nullable=True)
     stack_id = sqlalchemy.Column('stack_id', sqlalchemy.String(36),
                                  sqlalchemy.ForeignKey('stack.id'),
-                                 primary_key=True,nullable=False)
+                                 nullable=False)
     template_id = sqlalchemy.Column('template_id', sqlalchemy.Integer,
-                                    default=0)
+                                    primary_key=True, nullable=False)
     status = sqlalchemy.Column('status', sqlalchemy.Integer,
                                default=TASK_STATUS.UN_SCHEDULED)

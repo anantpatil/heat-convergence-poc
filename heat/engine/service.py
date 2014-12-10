@@ -512,6 +512,7 @@ class EngineService(service.Service):
     def _handle_resource_notif(engine_id, context, request_id, stack_id,
                                template_id, resource_id, convg_status):
         stack = parser.Stack.load(context, stack_id=stack_id)
+        LOG.debug("==== Handling notif for %s" % resource_id)
         lock = EngineService._spin_wait_acquire_lock_or_timeout(engine_id, context,
                                                        stack)
         if not lock:
@@ -581,13 +582,14 @@ class EngineService(service.Service):
     @staticmethod
     def _start_update_with_lock(engine_id, context, stack, updated_stack,
                                 event=None, action=None):
+        LOG.debug("==== Waiting on lock for update stack: %s" % stack.name)
         lock = EngineService._spin_wait_acquire_lock_or_timeout(engine_id,
                                                                 context,
                                                                 stack)
         if not lock:
             stack.handle_timeout()
         try:
-            stack.update(updated_stack, action=action, event=event)
+            parser.Stack.update(stack, updated_stack, action=action, event=event)
         finally:
             lock.release(stack.id)
 

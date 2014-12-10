@@ -950,14 +950,14 @@ def graph_delete_egde(context, value):
     session.query(models.DependencyTaskGraph).filter_by(**value).delete()
 
 
-def graph_update_edge(context, value):
+def graph_update_edge(context, value, new_template_id):
     session = _session(context)
     session.query(models.DependencyTaskGraph).\
             filter_by(resource_name=value['resource_name'],
                       needed_by=value.get('needed_by',''),
-                      stack_id=value['stack_id']).\
-                      update({"template_id": value['template_id']})
-    #session.flush()
+                      template_id=value['template_id']).\
+                      update({"template_id": new_template_id})
+    session.flush()
 
 def graph_get_all_by_stack(context, stack_id):
     """ Retrieves all the edges of the graph for the given stack. """
@@ -971,6 +971,14 @@ def graph_delete(context, stack_id):
     session = _session(context)
     with session.begin():
         session.query(models.DependencyTaskGraph).filter_by(stack_id=stack_id).delete()
+    session.flush()
+
+
+def graph_delete_edges_for_template(context, template_id):
+    """ Deletes all the edges of the graph for the given stack. """
+    session = _session(context)
+    with session.begin():
+        session.query(models.DependencyTaskGraph).filter_by(template_id=template_id).delete()
     session.flush()
 
 
