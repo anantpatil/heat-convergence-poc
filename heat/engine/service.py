@@ -635,10 +635,6 @@ class EngineService(service.Service):
                 args.get(rpc_api.PARAM_CLEAR_PARAMETERS, []))
         tmpl = templatem.Template(template, files=files, env=env)
         # NOTE: set predecessor only if the earlier one realized.
-        if current_stack.status == 'COMPLETE':
-            tmpl.predecessor = current_stack.t.id
-        else:
-            tmpl.id = current_stack.t.id
         if len(tmpl[tmpl.RESOURCES]) > cfg.CONF.max_resources_per_stack:
             raise exception.RequestLimitExceeded(
                 message=exception.StackResourceLimitExceeded.msg_fmt)

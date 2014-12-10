@@ -743,7 +743,7 @@ class Resource(object):
             self._move_to_newer_template(new_res, back_up)
         except UpdateReplace:
             # Resource does not support in-place update, create a new one.
-            self.state_set(new_res.action, new_res.FAILED, 'Update replace failed.'
+            self.state_set(new_res.action, new_res.status, 'Update replace failed.'
                                                      ' Creating new version.')
             yield self._replace(new_res)
 

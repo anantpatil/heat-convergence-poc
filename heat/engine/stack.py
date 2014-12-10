@@ -618,7 +618,7 @@ class Stack(collections.Mapping):
                     if all_versions:
                         curr_res = all_versions[self.t.predecessor]
                         new_res.store()
-                        new_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
+                        new_res.state_set(curr_res.action, curr_res.status,
                                           "Scheduled for update.")
                         curr_res.state_set(curr_res.UPDATE, curr_res.SCHEDULED,
                                           "Updating resource")
@@ -921,6 +921,7 @@ class Stack(collections.Mapping):
         new_stack.updated_time = timeutils.utcnow()
         # update request ID
         new_stack._generate_new_req_id()
+        new_stack.t.predecessor = curr_stack.t.id
         new_stack.store()
         # reset the resources
         new_stack._reset_resources()

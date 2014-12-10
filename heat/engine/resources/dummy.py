@@ -170,7 +170,7 @@ class Dummy(resource.Resource):
             properties.Schema.NUMBER,
             _('Value which can be set for resource to wait after an action '
               'is performed.'),
-            default=2,
+            default=6,
         ),
     }
 
